@@ -240,7 +240,17 @@
             repo: 'GitBlog'
         };
 
-        // 获取所有文章 - 修复了URL中的空格问题
+        // Base64解码函数 - 支持UTF-8
+        function base64ToUTF8(base64) {
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new TextDecoder('utf-8').decode(bytes);
+        }
+
+        // 获取所有文章
         async function fetchPosts() {
             try {
                 const response = await fetch(
@@ -257,7 +267,6 @@
                 displayPosts(mdFiles);
                 updateNavigation(mdFiles);
                 
-                // 默认加载第一篇文章
                 if (mdFiles.length > 0) {
                     loadPost(mdFiles[0].name);
                 } else {
@@ -268,17 +277,6 @@
                 console.error('获取文章失败:', error);
                 document.getElementById('nav-list').innerHTML = 
                     '<li class="error">加载失败，请确保仓库是公开的且有posts文件夹</li>';
-                document.getElementById('post-list').innerHTML = 
-                    `<div class="error">
-                        <h3>加载失败</h3>
-                        <p>错误信息: ${error.message}</p>
-                        <p>请检查：</p>
-                        <ul>
-                            <li>仓库是否为公开状态</li>
-                            <li>posts文件夹是否存在</li>
-                            <li>是否有.md文件</li>
-                        </ul>
-                    </div>`;
             }
         }
 
@@ -295,12 +293,11 @@
             ).join('');
         }
 
-        // 显示文章列表
         function displayPosts(files) {
-            // 导航栏已经处理了，这里可以留空或做其他展示
+            // 导航已处理
         }
 
-        // 加载并显示文章 - 改进编码处理
+        // 加载并显示文章 - 使用改进的编码处理
         async function loadPost(filename) {
             try {
                 document.getElementById('post-list').innerHTML = '<div class="loading">加载中...</div>';
@@ -315,14 +312,8 @@
                 
                 const data = await response.json();
                 
-                // 改进的UTF-8编码处理
-                const byteString = atob(data.content);
-                const byteArray = new Uint8Array(byteString.length);
-                for (let i = 0; i < byteString.length; i++) {
-                    byteArray[i] = byteString.charCodeAt(i);
-                }
-                const decoder = new TextDecoder('utf-8');
-                const content = decoder.decode(byteArray);
+                // 使用改进的解码函数
+                const content = base64ToUTF8(data.content);
                 
                 document.getElementById('post-list').innerHTML = marked.parse(content);
                 
@@ -337,7 +328,6 @@
             }
         }
 
-        // 显示编辑器
         function showEditor() {
             document.getElementById('post-list').style.display = 'none';
             document.getElementById('editor').style.display = 'block';
@@ -345,13 +335,11 @@
             document.getElementById('post-content').value = '';
         }
 
-        // 隐藏编辑器
         function hideEditor() {
             document.getElementById('editor').style.display = 'none';
             document.getElementById('post-list').style.display = 'block';
         }
 
-        // 保存文章
         function savePost() {
             alert('当前为只读模式，无法保存文章。\n如需编辑功能，请配置GitHub Token。');
             hideEditor();
