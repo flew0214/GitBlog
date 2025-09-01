@@ -240,7 +240,7 @@
             repo: 'GitBlog'
         };
 
-        // 获取所有文章
+        // 获取所有文章 - 修复了URL中的空格问题
         async function fetchPosts() {
             try {
                 const response = await fetch(
@@ -295,12 +295,12 @@
             ).join('');
         }
 
-        // 显示文章列表（这个函数可以扩展）
+        // 显示文章列表
         function displayPosts(files) {
             // 导航栏已经处理了，这里可以留空或做其他展示
         }
 
-        // 加载并显示文章
+        // 加载并显示文章 - 改进编码处理
         async function loadPost(filename) {
             try {
                 document.getElementById('post-list').innerHTML = '<div class="loading">加载中...</div>';
@@ -314,9 +314,18 @@
                 }
                 
                 const data = await response.json();
-                const content = atob(data.content); // base64解码
-                document.getElementById('post-list').innerHTML = 
-                    marked.parse(content);
+                
+                // 改进的UTF-8编码处理
+                const byteString = atob(data.content);
+                const byteArray = new Uint8Array(byteString.length);
+                for (let i = 0; i < byteString.length; i++) {
+                    byteArray[i] = byteString.charCodeAt(i);
+                }
+                const decoder = new TextDecoder('utf-8');
+                const content = decoder.decode(byteArray);
+                
+                document.getElementById('post-list').innerHTML = marked.parse(content);
+                
             } catch (error) {
                 console.error('加载文章失败:', error);
                 document.getElementById('post-list').innerHTML = 
@@ -342,7 +351,7 @@
             document.getElementById('post-list').style.display = 'block';
         }
 
-        // 保存文章（只读模式下显示提示）
+        // 保存文章
         function savePost() {
             alert('当前为只读模式，无法保存文章。\n如需编辑功能，请配置GitHub Token。');
             hideEditor();
