@@ -1,4 +1,13 @@
 
-key
+## 项目结构
 
-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
+GitBlog/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── index.html
+├── posts/
+│   ├── hello-world.md
+│   └── my-first-post.md
+└── README.md
+
