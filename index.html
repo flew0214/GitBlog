@@ -27,14 +27,56 @@
             width: 250px;
             background: #2c3e50;
             color: white;
-            padding: 20px;
             height: 100vh;
             position: fixed;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sidebar.collapsed {
+            width: 50px;
+        }
+
+        #sidebar-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #34495e;
+        }
+
+        #sidebar.collapsed #sidebar-header h2 {
+            display: none;
+        }
+
+        #sidebar.collapsed .new-post-btn span {
+            display: none;
+        }
+
+        #sidebar.collapsed .new-post-btn::before {
+            content: "+";
+            font-size: 20px;
+        }
+
+        #sidebar-toggle {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+        }
+
+        #nav-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
         }
 
         #sidebar h2 {
-            margin-bottom: 20px;
-            text-align: center;
+            margin-bottom: 0;
+            font-size: 18px;
         }
 
         #nav-list {
@@ -49,14 +91,46 @@
             cursor: pointer;
             transition: background 0.3s;
             font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         #nav-list li:hover {
             background: #3d566e;
         }
 
+        .nav-folder {
+            background: #34495e;
+            margin: 8px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .nav-folder-header {
+            padding: 10px 15px;
+            background: #2c3e50;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .nav-folder-header:hover {
+            background: #34495e;
+        }
+
+        .nav-folder-content {
+            padding: 5px 0;
+        }
+
+        .nav-folder.collapsed .nav-folder-content {
+            display: none;
+        }
+
         .new-post-btn {
-            width: 100%;
+            width: calc(100% - 20px);
             padding: 12px;
             background: #3498db;
             color: white;
@@ -64,11 +138,18 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            margin-top: 20px;
+            margin: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .new-post-btn:hover {
             background: #2980b9;
+        }
+
+        .new-post-btn span {
+            margin-left: 8px;
         }
 
         /* 主内容区 */
@@ -76,6 +157,11 @@
             flex: 1;
             margin-left: 250px;
             padding: 30px;
+            transition: margin-left 0.3s ease;
+        }
+
+        #sidebar.collapsed + #main-content {
+            margin-left: 50px;
         }
 
         #post-list {
@@ -202,17 +288,30 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+
+        .post-date {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- 左侧导航栏 -->
         <nav id="sidebar">
-            <h2>我的博客</h2>
-            <ul id="nav-list">
-                <li class="loading">加载中...</li>
-            </ul>
-            <button class="new-post-btn" onclick="showEditor()">新建文章</button>
+            <div id="sidebar-header">
+                <h2 id="blog-title">我的博客</h2>
+                <button id="sidebar-toggle">←</button>
+            </div>
+            <div id="nav-container">
+                <ul id="nav-list">
+                    <li class="loading">加载中...</li>
+                </ul>
+            </div>
+            <button class="new-post-btn" onclick="showEditor()">
+                <span>新建文章</span>
+            </button>
         </nav>
 
         <!-- 主内容区 -->
@@ -224,6 +323,7 @@
             <div id="editor">
                 <h2>新建文章</h2>
                 <input type="text" id="post-title" placeholder="请输入文章标题">
+                <input type="text" id="post-folder" placeholder="文件夹名称（可选）">
                 <textarea id="post-content" placeholder="请输入文章内容（支持Markdown语法）"></textarea>
                 <div class="editor-buttons">
                     <button class="btn btn-secondary" onclick="hideEditor()">取消</button>
@@ -250,7 +350,40 @@
             return new TextDecoder('utf-8').decode(bytes);
         }
 
-        // 获取所有文章
+        // 解析文件名中的日期和排序信息
+        function parseFileName(filename) {
+            // 格式: 2023-12-01-01-文章标题.md
+            const match = filename.match(/^(\d{4}-\d{2}-\d{2})-(\d+)-(.+)\.md$/);
+            if (match) {
+                return {
+                    date: match[1],
+                    order: parseInt(match[2]),
+                    title: match[3],
+                    original: filename
+                };
+            }
+            
+            // 格式: 2023-12-01-文章标题.md
+            const match2 = filename.match(/^(\d{4}-\d{2}-\d{2})-(.+)\.md$/);
+            if (match2) {
+                return {
+                    date: match2[1],
+                    order: 0,
+                    title: match2[2],
+                    original: filename
+                };
+            }
+            
+            // 普通格式
+            return {
+                date: null,
+                order: 0,
+                title: filename.replace('.md', ''),
+                original: filename
+            };
+        }
+
+        // 获取所有文章 - 支持多级目录
         async function fetchPosts() {
             try {
                 const response = await fetch(
@@ -262,13 +395,69 @@
                 }
                 
                 const files = await response.json();
-                const mdFiles = files.filter(file => file.name.endsWith('.md'));
                 
-                displayPosts(mdFiles);
-                updateNavigation(mdFiles);
+                // 分类处理文件和文件夹
+                const folders = {};
+                const rootFiles = [];
                 
-                if (mdFiles.length > 0) {
-                    loadPost(mdFiles[0].name);
+                for (const item of files) {
+                    if (item.type === 'dir') {
+                        // 获取文件夹内容
+                        const folderResponse = await fetch(item.url);
+                        if (folderResponse.ok) {
+                            const folderFiles = await folderResponse.json();
+                            const mdFiles = folderFiles
+                                .filter(file => file.name.endsWith('.md'))
+                                .map(file => ({
+                                    ...file,
+                                    folder: item.name
+                                }));
+                            folders[item.name] = mdFiles;
+                        }
+                    } else if (item.name.endsWith('.md')) {
+                        rootFiles.push(item);
+                    }
+                }
+                
+                // 处理根目录文件
+                const processedRootFiles = rootFiles.map(file => {
+                    const info = parseFileName(file.name);
+                    return {
+                        ...file,
+                        ...info,
+                        folder: null
+                    };
+                });
+                
+                // 处理文件夹中的文件
+                const allFiles = [...processedRootFiles];
+                for (const [folderName, folderFiles] of Object.entries(folders)) {
+                    const processedFolderFiles = folderFiles.map(file => {
+                        const info = parseFileName(file.name);
+                        return {
+                            ...file,
+                            ...info,
+                            folder: folderName
+                        };
+                    });
+                    allFiles.push(...processedFolderFiles);
+                }
+                
+                // 排序：按日期降序，然后按order升序
+                allFiles.sort((a, b) => {
+                    if (a.date && b.date) {
+                        if (a.date !== b.date) {
+                            return b.date.localeCompare(a.date); // 日期降序
+                        }
+                    }
+                    return a.order - b.order; // order升序
+                });
+                
+                updateNavigation(allFiles, folders);
+                
+                // 默认加载第一篇文章
+                if (allFiles.length > 0) {
+                    loadPost(allFiles[0].original, allFiles[0].folder);
                 } else {
                     document.getElementById('post-list').innerHTML = 
                         '<h2>欢迎来到我的博客</h2><p>还没有文章，点击左侧"新建文章"按钮开始创作吧！</p>';
@@ -280,41 +469,76 @@
             }
         }
 
-        // 更新导航栏
-        function updateNavigation(files) {
+        // 更新导航栏 - 支持多级目录和折叠
+        function updateNavigation(files, folders) {
             const navList = document.getElementById('nav-list');
+            
             if (files.length === 0) {
                 navList.innerHTML = '<li style="background: #e74c3c;">暂无文章</li>';
                 return;
             }
             
-            navList.innerHTML = files.map(file => 
-                `<li onclick="loadPost('${file.name}')">${file.name.replace('.md', '')}</li>`
-            ).join('');
+            let html = '';
+            
+            // 添加根目录文件
+            const rootFiles = files.filter(file => !file.folder);
+            if (rootFiles.length > 0) {
+                html += '<div class="nav-folder">';
+                html += '<div class="nav-folder-header" onclick="toggleFolder(this)">根目录 ▼</div>';
+                html += '<div class="nav-folder-content">';
+                rootFiles.forEach(file => {
+                    const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
+                    html += `<li onclick="loadPost('${file.original}')">${file.title}${dateStr}</li>`;
+                });
+                html += '</div></div>';
+            }
+            
+            // 添加文件夹
+            for (const [folderName, folderFiles] of Object.entries(folders)) {
+                const folderFilesInfo = files.filter(file => file.folder === folderName);
+                html += `<div class="nav-folder" data-folder="${folderName}">`;
+                html += `<div class="nav-folder-header" onclick="toggleFolder(this)">${folderName} ▼</div>`;
+                html += '<div class="nav-folder-content">';
+                folderFilesInfo.forEach(file => {
+                    const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
+                    html += `<li onclick="loadPost('${file.original}', '${folderName}')">${file.title}${dateStr}</li>`;
+                });
+                html += '</div></div>';
+            }
+            
+            navList.innerHTML = html;
         }
 
-        function displayPosts(files) {
-            // 导航已处理
+        // 切换文件夹折叠状态
+        function toggleFolder(element) {
+            const folder = element.parentElement;
+            folder.classList.toggle('collapsed');
+            const icon = element.querySelector('span') || element;
+            if (folder.classList.contains('collapsed')) {
+                element.innerHTML = element.innerHTML.replace('▼', '▶');
+            } else {
+                element.innerHTML = element.innerHTML.replace('▶', '▼');
+            }
         }
 
-        // 加载并显示文章 - 使用改进的编码处理
-        async function loadPost(filename) {
+        // 加载并显示文章
+        async function loadPost(filename, folder = null) {
             try {
                 document.getElementById('post-list').innerHTML = '<div class="loading">加载中...</div>';
                 
-                const response = await fetch(
-                    `https://api.github.com/repos/${config.owner}/${config.repo}/contents/posts/${filename}`
-                );
+                let url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/posts/${filename}`;
+                if (folder) {
+                    url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/posts/${folder}/${filename}`;
+                }
+                
+                const response = await fetch(url);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const data = await response.json();
-                
-                // 使用改进的解码函数
                 const content = base64ToUTF8(data.content);
-                
                 document.getElementById('post-list').innerHTML = marked.parse(content);
                 
             } catch (error) {
@@ -328,25 +552,41 @@
             }
         }
 
+        // 显示编辑器
         function showEditor() {
             document.getElementById('post-list').style.display = 'none';
             document.getElementById('editor').style.display = 'block';
             document.getElementById('post-title').value = '';
+            document.getElementById('post-folder').value = '';
             document.getElementById('post-content').value = '';
         }
 
+        // 隐藏编辑器
         function hideEditor() {
             document.getElementById('editor').style.display = 'none';
             document.getElementById('post-list').style.display = 'block';
         }
 
+        // 保存文章（只读模式下显示提示）
         function savePost() {
             alert('当前为只读模式，无法保存文章。\n如需编辑功能，请配置GitHub Token。');
             hideEditor();
         }
 
+        // 切换侧边栏
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebar-toggle');
+            sidebar.classList.toggle('collapsed');
+            toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '←';
+        }
+
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 绑定侧边栏切换事件
+            document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+            
+            // 初始化文章列表
             fetchPosts();
         });
     </script>
