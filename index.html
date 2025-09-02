@@ -50,15 +50,6 @@
             display: none;
         }
 
-        #sidebar.collapsed .new-post-btn span {
-            display: none;
-        }
-
-        #sidebar.collapsed .new-post-btn::before {
-            content: "+";
-            font-size: 20px;
-        }
-
         #sidebar-toggle {
             background: none;
             border: none;
@@ -129,29 +120,6 @@
             display: none;
         }
 
-        .new-post-btn {
-            width: calc(100% - 20px);
-            padding: 12px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .new-post-btn:hover {
-            background: #2980b9;
-        }
-
-        .new-post-btn span {
-            margin-left: 8px;
-        }
-
         /* 主内容区 */
         #main-content {
             flex: 1;
@@ -220,6 +188,11 @@
 
         .btn-secondary {
             background: #95a5a6;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
             color: white;
         }
 
@@ -295,8 +268,8 @@
             margin-left: 10px;
         }
 
- /* 添加一些新样式 */
- .admin-bar {
+        /* 管理样式 */
+        .admin-bar {
             background: #3498db;
             padding: 10px 20px;
             display: flex;
@@ -318,6 +291,14 @@
             background: #219653;
         }
         
+        .admin-btn.danger {
+            background: #e74c3c;
+        }
+        
+        .admin-btn.danger:hover {
+            background: #c0392b;
+        }
+        
         .login-section {
             text-align: center;
             padding: 20px;
@@ -332,6 +313,37 @@
             margin: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
+        }
+        
+        /* 文章操作按钮 */
+        .post-actions {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .action-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .action-btn:hover {
+            background: #2980b9;
+        }
+        
+        .action-btn.danger {
+            background: #e74c3c;
+        }
+        
+        .action-btn.danger:hover {
+            background: #c0392b;
         }
     </style>
 </head>
@@ -348,9 +360,7 @@
                     <li class="loading">加载中...</li>
                 </ul>
             </div>
-            <button class="new-post-btn" onclick="showEditor()">
-                <span>新建文章</span>
-            </button>
+            <!-- 移除了侧边栏的新建文章按钮 -->
         </nav>
 
         <!-- 主内容区 -->
@@ -376,17 +386,26 @@
                 </p>
             </div>
             
+            <!-- 文章操作按钮 -->
+            <div class="post-actions" id="post-actions">
+                <button class="action-btn" onclick="editCurrentPost()">编辑</button>
+                <button class="action-btn danger" onclick="deleteCurrentPost()">删除</button>
+            </div>
+            
             <div id="post-list">
                 <div class="loading">正在加载博客内容...</div>
             </div>
             
             <div id="editor">
-                <h2>新建/编辑文章</h2>
+                <h2 id="editor-title">新建文章</h2>
                 <input type="text" id="post-title" placeholder="请输入文章标题">
                 <input type="text" id="post-folder" placeholder="文件夹名称（可选）">
+                <input type="hidden" id="post-original-name">
+                <input type="hidden" id="post-folder-name">
+                <input type="hidden" id="post-sha">
                 <textarea id="post-content" placeholder="请输入文章内容（支持Markdown语法）"></textarea>
                 <div style="margin: 10px 0;">
-                    <small>文件名格式：YYYY-MM-DD-标题.md 或 2023-12-01-01-标题.md</small>
+                    <small>文件名格式：YYYY-MM-DD-标题.md</small>
                 </div>
                 <div class="editor-buttons">
                     <button class="btn btn-secondary" onclick="hideEditor()">取消</button>
@@ -405,6 +424,7 @@
 
         // 全局变量
         let authToken = localStorage.getItem('blog_token') || '';
+        let currentPostInfo = null; // 当前文章信息
 
         // Base64解码函数
         function base64ToUTF8(base64) {
@@ -496,7 +516,9 @@
             localStorage.removeItem('blog_token');
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('admin-bar').style.display = 'none';
+            document.getElementById('post-actions').style.display = 'none';
             document.getElementById('token-input').value = '';
+            currentPostInfo = null;
             fetchPosts(); // 重新以只读模式加载
         }
 
@@ -509,6 +531,7 @@
             } else {
                 document.getElementById('login-section').style.display = 'block';
                 document.getElementById('admin-bar').style.display = 'none';
+                document.getElementById('post-actions').style.display = 'none';
                 fetchPosts(); // 只读模式
             }
         }
@@ -582,10 +605,10 @@
                 updateNavigation(allFiles, folders);
                 
                 if (allFiles.length > 0) {
-                    loadPost(allFiles[0].original, allFiles[0].folder);
+                    loadPost(allFiles[0].original, allFiles[0].folder, allFiles[0].sha);
                 } else {
                     document.getElementById('post-list').innerHTML = 
-                        '<h2>欢迎来到我的博客</h2><p>还没有文章，点击左侧"新建文章"按钮开始创作吧！</p>';
+                        '<h2>欢迎来到我的博客</h2><p>还没有文章，点击"新建文章"按钮开始创作吧！</p>';
                 }
             } catch (error) {
                 console.error('获取文章失败:', error);
@@ -612,7 +635,7 @@
                 html += '<div class="nav-folder-content">';
                 rootFiles.forEach(file => {
                     const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
-                    html += `<li onclick="loadPost('${file.original}')">${file.title}${dateStr}</li>`;
+                    html += `<li onclick="loadPost('${file.original}', null, '${file.sha}')">${file.title}${dateStr}</li>`;
                 });
                 html += '</div></div>';
             }
@@ -624,7 +647,7 @@
                 html += '<div class="nav-folder-content">';
                 folderFilesInfo.forEach(file => {
                     const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
-                    html += `<li onclick="loadPost('${file.original}', '${folderName}')">${file.title}${dateStr}</li>`;
+                    html += `<li onclick="loadPost('${file.original}', '${folderName}', '${file.sha}')">${file.title}${dateStr}</li>`;
                 });
                 html += '</div></div>';
             }
@@ -644,7 +667,7 @@
         }
 
         // 加载并显示文章
-        async function loadPost(filename, folder = null) {
+        async function loadPost(filename, folder = null, sha = null) {
             try {
                 document.getElementById('post-list').innerHTML = '<div class="loading">加载中...</div>';
                 
@@ -661,7 +684,23 @@
                 
                 const data = await response.json();
                 const content = base64ToUTF8(data.content);
+                
+                // 保存当前文章信息
+                currentPostInfo = {
+                    filename: filename,
+                    folder: folder,
+                    sha: data.sha,
+                    content: content
+                };
+                
                 document.getElementById('post-list').innerHTML = marked.parse(content);
+                
+                // 如果已登录，显示编辑删除按钮
+                if (authToken) {
+                    document.getElementById('post-actions').style.display = 'block';
+                } else {
+                    document.getElementById('post-actions').style.display = 'none';
+                }
                 
             } catch (error) {
                 console.error('加载文章失败:', error);
@@ -674,17 +713,112 @@
             }
         }
 
-        // 显示编辑器
+        // 编辑当前文章
+        function editCurrentPost() {
+            if (!authToken) {
+                alert('请先登录管理账号');
+                return;
+            }
+            
+            if (!currentPostInfo) {
+                alert('无法获取文章信息');
+                return;
+            }
+            
+            const info = currentPostInfo;
+            
+            document.getElementById('editor-title').textContent = '编辑文章';
+            document.getElementById('post-title').value = info.filename.replace('.md', '');
+            // 从文件名中提取标题（去掉日期前缀）
+            const titleMatch = info.filename.match(/^(\d{4}-\d{2}-\d{2})-(.+)\.md$/);
+            if (titleMatch) {
+                document.getElementById('post-title').value = titleMatch[2];
+            } else {
+                document.getElementById('post-title').value = info.filename.replace('.md', '');
+            }
+            
+            document.getElementById('post-folder').value = info.folder || '';
+            document.getElementById('post-content').value = info.content;
+            document.getElementById('post-original-name').value = info.filename;
+            document.getElementById('post-folder-name').value = info.folder || '';
+            document.getElementById('post-sha').value = info.sha;
+            
+            document.getElementById('post-list').style.display = 'none';
+            document.getElementById('editor').style.display = 'block';
+        }
+
+        // 删除当前文章（移动到回收站）
+        async function deleteCurrentPost() {
+            if (!authToken) {
+                alert('请先登录管理账号');
+                return;
+            }
+            
+            if (!currentPostInfo) {
+                alert('无法获取文章信息');
+                return;
+            }
+            
+            if (!confirm('确定要删除这篇文章吗？')) {
+                return;
+            }
+            
+            try {
+                const info = currentPostInfo;
+                let filePath = `posts/${info.filename}`;
+                if (info.folder) {
+                    filePath = `posts/${info.folder}/${info.filename}`;
+                }
+                
+                // 删除文件
+                const response = await fetch(
+                    `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${filePath}`,
+                    {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `token ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: `Delete post: ${info.filename}`,
+                            sha: info.sha
+                        })
+                    }
+                );
+                
+                if (response.ok) {
+                    alert('删除成功！');
+                    document.getElementById('post-actions').style.display = 'none';
+                    currentPostInfo = null;
+                    fetchPosts(); // 刷新文章列表
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '删除失败');
+                }
+                
+            } catch (error) {
+                console.error('删除失败:', error);
+                alert(`删除失败: ${error.message}`);
+            }
+        }
+
+        // 显示新建文章编辑器
         function showEditor() {
             if (!authToken) {
                 alert('请先登录管理账号');
                 return;
             }
-            document.getElementById('post-list').style.display = 'none';
-            document.getElementById('editor').style.display = 'block';
+            
+            document.getElementById('editor-title').textContent = '新建文章';
             document.getElementById('post-title').value = '';
             document.getElementById('post-folder').value = '';
             document.getElementById('post-content').value = '';
+            document.getElementById('post-original-name').value = '';
+            document.getElementById('post-folder-name').value = '';
+            document.getElementById('post-sha').value = '';
+            
+            document.getElementById('post-list').style.display = 'none';
+            document.getElementById('editor').style.display = 'block';
         }
 
         // 隐藏编辑器
@@ -703,6 +837,9 @@
             const title = document.getElementById('post-title').value.trim();
             const folder = document.getElementById('post-folder').value.trim();
             const content = document.getElementById('post-content').value.trim();
+            const originalName = document.getElementById('post-original-name').value;
+            const originalFolder = document.getElementById('post-folder-name').value;
+            const originalSha = document.getElementById('post-sha').value;
             
             if (!title) {
                 alert('请输入文章标题');
@@ -722,26 +859,37 @@
                 
                 // 构造文件路径
                 let filePath = `posts/${filename}`;
+                let originalPath = null;
+                
                 if (folder) {
                     filePath = `posts/${folder}/${filename}`;
                 }
                 
-                // 检查文件是否已存在
+                // 如果是编辑现有文章
                 let sha = null;
-                try {
-                    const checkUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${filePath}`;
-                    const checkResponse = await fetch(checkUrl, {
-                        headers: {
-                            'Authorization': `token ${authToken}`
-                        }
-                    });
-                    
-                    if (checkResponse.ok) {
-                        const existingFile = await checkResponse.json();
-                        sha = existingFile.sha;
+                if (originalName) {
+                    originalPath = `posts/${originalName}`;
+                    if (originalFolder) {
+                        originalPath = `posts/${originalFolder}/${originalName}`;
                     }
-                } catch (e) {
-                    // 文件不存在，正常创建
+                    sha = originalSha;
+                } else {
+                    // 检查新文件是否已存在
+                    try {
+                        const checkUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${filePath}`;
+                        const checkResponse = await fetch(checkUrl, {
+                            headers: {
+                                'Authorization': `token ${authToken}`
+                            }
+                        });
+                        
+                        if (checkResponse.ok) {
+                            const existingFile = await checkResponse.json();
+                            sha = existingFile.sha;
+                        }
+                    } catch (e) {
+                        // 文件不存在
+                    }
                 }
 
                 // 保存文件
