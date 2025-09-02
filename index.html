@@ -400,27 +400,43 @@
         // 全局变量
         let authToken = localStorage.getItem('blog_token') || '';
         let currentPostInfo = null;
-        let allPostsCache = []; // 缓存所有文章列表
 
-        // Base64解码函数
+        // 改进的Base64解码函数
         function base64ToUTF8(base64) {
-            const binaryString = atob(base64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+            try {
+                // 方法1：使用TextDecoder（推荐）
+                const binaryString = atob(base64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const decoder = new TextDecoder('utf-8');
+                return decoder.decode(bytes);
+            } catch (e) {
+                // 方法2：备用方案
+                try {
+                    return decodeURIComponent(escape(atob(base64)));
+                } catch (e2) {
+                    // 方法3：最后的备用方案
+                    return atob(base64);
+                }
             }
-            return new TextDecoder('utf-8').decode(bytes);
         }
 
-        // UTF-8编码为Base64
+        // 改进的UTF-8编码函数
         function utf8ToBase64(str) {
-            const encoder = new TextEncoder();
-            const bytes = encoder.encode(str);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) {
-                binary += String.fromCharCode(bytes[i]);
+            try {
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(str);
+                let binary = '';
+                for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            } catch (e) {
+                // 备用方案
+                return btoa(unescape(encodeURIComponent(str)));
             }
-            return btoa(binary);
         }
 
         // 安全解析文件名
@@ -431,7 +447,7 @@
                         date: null,
                         order: 0,
                         title: '未知文章',
-                        original: filename || 'unknown'
+                        original: 'unknown'
                     };
                 }
                 
@@ -487,8 +503,9 @@
                     'Authorization': `token ${token}`
                 }
             })
-            .then(response => {
-                if (response.ok) {
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.login) {
                     authToken = token;
                     localStorage.setItem('blog_token', token);
                     document.getElementById('login-section').style.display = 'none';
@@ -502,7 +519,7 @@
             })
             .catch(error => {
                 console.error('验证失败:', error);
-                alert('Token验证失败');
+                alert('Token验证失败: ' + error.message);
             });
         }
 
@@ -517,7 +534,6 @@
             document.getElementById('current-post-display').textContent = '';
             document.getElementById('token-input').value = '';
             currentPostInfo = null;
-            allPostsCache = [];
             fetchPosts();
         }
 
@@ -540,12 +556,24 @@
         // 获取所有文章
         async function fetchPosts() {
             try {
+                document.getElementById('nav-list').innerHTML = '<li class="loading">加载中...</li>';
+                
                 const response = await fetch(
-                    `https://api.github.com/repos/${config.owner}/${config.repo}/contents/posts`
+                    `https://api.github.com/repos/${config.owner}/${config.repo}/contents/posts`,
+                    authToken ? {
+                        headers: {
+                            'Authorization': `token ${authToken}`
+                        }
+                    } : {}
                 );
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    if (response.status === 404) {
+                        throw new Error('posts文件夹不存在');
+                    } else if (response.status === 403) {
+                        throw new Error('API请求频率限制，请登录后重试');
+                    }
+                    throw new Error(`HTTP错误: ${response.status}`);
                 }
                 
                 const files = await response.json();
@@ -557,7 +585,11 @@
                 for (const item of files) {
                     if (item.type === 'dir') {
                         try {
-                            const folderResponse = await fetch(item.url);
+                            const folderResponse = await fetch(item.url, authToken ? {
+                                headers: {
+                                    'Authorization': `token ${authToken}`
+                                }
+                            } : {});
                             if (folderResponse.ok) {
                                 const folderFiles = await folderResponse.json();
                                 const mdFiles = folderFiles
@@ -613,14 +645,10 @@
                     return a.order - b.order;
                 });
                 
-                // 缓存文章列表
-                allPostsCache = allFiles;
-                
                 updateNavigation(allFiles, folders);
                 
-                // 加载第一篇文章或显示欢迎信息
+                // 加载文章
                 if (allFiles.length > 0) {
-                    // 如果当前文章还存在，继续显示它
                     if (currentPostInfo) {
                         const exists = allFiles.some(file => 
                             file.original === currentPostInfo.filename && 
@@ -629,7 +657,6 @@
                         if (exists) {
                             loadPost(currentPostInfo.filename, currentPostInfo.folder, currentPostInfo.sha);
                         } else {
-                            // 当前文章已被删除，加载第一篇文章
                             loadPost(allFiles[0].original, allFiles[0].folder, allFiles[0].sha);
                         }
                     } else {
@@ -643,6 +670,8 @@
                 }
             } catch (error) {
                 console.error('获取文章失败:', error);
+                document.getElementById('nav-list').innerHTML = 
+                    `<li class="error">加载失败: ${error.message}</li>`;
                 document.getElementById('post-list').innerHTML = 
                     `<div class="error">
                         <h3>加载失败</h3>
@@ -676,7 +705,7 @@
                 html += '<div class="nav-folder-content">';
                 rootFiles.forEach(file => {
                     const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
-                    html += `<li onclick="loadPost('${file.original}', null, '${file.sha || ''}')">${file.title}${dateStr}</li>`;
+                    html += `<li onclick="loadPost('${file.original.replace(/'/g, "\\'")}', null, '${file.sha || ''}')">${file.title}${dateStr}</li>`;
                 });
                 html += '</div></div>';
             }
@@ -688,7 +717,7 @@
                 html += '<div class="nav-folder-content">';
                 folderFilesInfo.forEach(file => {
                     const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
-                    html += `<li onclick="loadPost('${file.original}', '${folderName}', '${file.sha || ''}')">${file.title}${dateStr}</li>`;
+                    html += `<li onclick="loadPost('${file.original.replace(/'/g, "\\'")}', '${folderName}', '${file.sha || ''}')">${file.title}${dateStr}</li>`;
                 });
                 html += '</div></div>';
             }
@@ -735,22 +764,33 @@
                     url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/posts/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
                 }
                 
-                const response = await fetch(url);
+                const response = await fetch(url, authToken ? {
+                    headers: {
+                        'Authorization': `token ${authToken}`
+                    }
+                } : {});
                 
                 if (!response.ok) {
-                    // 如果文章不存在，可能是刚被删除
                     if (response.status === 404) {
-                        // 清理状态并重新加载文章列表
                         currentPostInfo = null;
                         updateCurrentPostDisplay();
                         fetchPosts();
                         return;
+                    } else if (response.status === 403) {
+                        throw new Error('API请求频率限制，请登录后重试');
                     }
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP错误: ${response.status}`);
                 }
                 
                 const data = await response.json();
+                
+                // 调试信息
+                console.log('原始内容:', data.content);
+                
                 const content = base64ToUTF8(data.content);
+                
+                // 调试信息
+                console.log('解码后内容:', content);
                 
                 // 保存当前文章信息
                 currentPostInfo = {
@@ -760,7 +800,19 @@
                     content: content
                 };
                 
-                document.getElementById('post-list').innerHTML = marked.parse(content);
+                // 渲染Markdown
+                try {
+                    const htmlContent = marked.parse(content);
+                    document.getElementById('post-list').innerHTML = htmlContent;
+                } catch (parseError) {
+                    console.error('Markdown解析错误:', parseError);
+                    document.getElementById('post-list').innerHTML = 
+                        `<div>
+                            <h3>${parseFileName(filename).title}</h3>
+                            <pre>${content}</pre>
+                        </div>`;
+                }
+                
                 updateCurrentPostDisplay();
                 
             } catch (error) {
@@ -768,12 +820,11 @@
                 document.getElementById('post-list').innerHTML = 
                     `<div class="error">
                         <h3>加载文章失败</h3>
-                        <p>无法加载文章: ${filename || '未知文件'}</p>
+                        <p>文件: ${filename || '未知文件'}</p>
                         <p>错误: ${error.message}</p>
-                        <button class="btn" onclick="fetchPosts()" style="margin-top: 10px;">重新加载</button>
+                        <button class="btn" onclick="fetchPosts()" style="margin-top: 10px;">返回文章列表</button>
                     </div>`;
                 
-                // 清除当前文章信息
                 currentPostInfo = null;
                 updateCurrentPostDisplay();
             }
@@ -846,10 +897,8 @@
                 
                 if (response.ok) {
                     alert('删除成功！');
-                    // 清理状态
                     currentPostInfo = null;
                     updateCurrentPostDisplay();
-                    // 重新加载文章列表
                     fetchPosts();
                 } else {
                     const errorData = await response.json();
@@ -928,7 +977,6 @@
                 if (originalName) {
                     sha = originalSha;
                 } else {
-                    // 检查新文件是否已存在
                     try {
                         const checkUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${encodeURIComponent(filePath)}`;
                         const checkResponse = await fetch(checkUrl, {
@@ -964,7 +1012,7 @@
                 if (response.ok) {
                     alert('保存成功！');
                     hideEditor();
-                    fetchPosts(); // 刷新文章列表
+                    fetchPosts();
                 } else {
                     const errorData = await response.json();
                     throw new Error(errorData.message || '保存失败');
