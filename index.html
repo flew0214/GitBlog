@@ -294,6 +294,45 @@
             color: #95a5a6;
             margin-left: 10px;
         }
+
+ /* 添加一些新样式 */
+ .admin-bar {
+            background: #3498db;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .admin-btn:hover {
+            background: #219653;
+        }
+        
+        .login-section {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .token-input {
+            width: 300px;
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -316,15 +355,39 @@
 
         <!-- 主内容区 -->
         <main id="main-content">
+            <!-- 管理栏 -->
+            <div class="admin-bar" id="admin-bar" style="display: none;">
+                <div>
+                    <span>博客管理</span>
+                </div>
+                <div>
+                    <button class="admin-btn" onclick="showEditor()">新建文章</button>
+                    <button class="admin-btn" onclick="logout()">退出管理</button>
+                </div>
+            </div>
+            
+            <!-- 登录区域 -->
+            <div class="login-section" id="login-section">
+                <h3>博客管理登录</h3>
+                <input type="password" id="token-input" class="token-input" placeholder="请输入GitHub Token">
+                <button class="admin-btn" onclick="login()">登录</button>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    需要GitHub Personal Access Token，权限：repo
+                </p>
+            </div>
+            
             <div id="post-list">
                 <div class="loading">正在加载博客内容...</div>
             </div>
             
             <div id="editor">
-                <h2>新建文章</h2>
+                <h2>新建/编辑文章</h2>
                 <input type="text" id="post-title" placeholder="请输入文章标题">
                 <input type="text" id="post-folder" placeholder="文件夹名称（可选）">
                 <textarea id="post-content" placeholder="请输入文章内容（支持Markdown语法）"></textarea>
+                <div style="margin: 10px 0;">
+                    <small>文件名格式：YYYY-MM-DD-标题.md 或 2023-12-01-01-标题.md</small>
+                </div>
                 <div class="editor-buttons">
                     <button class="btn btn-secondary" onclick="hideEditor()">取消</button>
                     <button class="btn btn-primary" onclick="savePost()">保存文章</button>
@@ -340,7 +403,10 @@
             repo: 'GitBlog'
         };
 
-        // Base64解码函数 - 支持UTF-8
+        // 全局变量
+        let authToken = localStorage.getItem('blog_token') || '';
+
+        // Base64解码函数
         function base64ToUTF8(base64) {
             const binaryString = atob(base64);
             const bytes = new Uint8Array(binaryString.length);
@@ -350,9 +416,19 @@
             return new TextDecoder('utf-8').decode(bytes);
         }
 
-        // 解析文件名中的日期和排序信息
+        // UTF-8编码为Base64
+        function utf8ToBase64(str) {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(str);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // 解析文件名
         function parseFileName(filename) {
-            // 格式: 2023-12-01-01-文章标题.md
             const match = filename.match(/^(\d{4}-\d{2}-\d{2})-(\d+)-(.+)\.md$/);
             if (match) {
                 return {
@@ -363,7 +439,6 @@
                 };
             }
             
-            // 格式: 2023-12-01-文章标题.md
             const match2 = filename.match(/^(\d{4}-\d{2}-\d{2})-(.+)\.md$/);
             if (match2) {
                 return {
@@ -374,7 +449,6 @@
                 };
             }
             
-            // 普通格式
             return {
                 date: null,
                 order: 0,
@@ -383,7 +457,63 @@
             };
         }
 
-        // 获取所有文章 - 支持多级目录
+        // 登录
+        function login() {
+            const token = document.getElementById('token-input').value.trim();
+            if (!token) {
+                alert('请输入Token');
+                return;
+            }
+            
+            // 验证token
+            fetch('https://api.github.com/user', {
+                headers: {
+                    'Authorization': `token ${token}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    authToken = token;
+                    localStorage.setItem('blog_token', token);
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('admin-bar').style.display = 'flex';
+                    document.getElementById('post-list').style.display = 'block';
+                    fetchPosts();
+                    alert('登录成功！');
+                } else {
+                    alert('Token无效，请检查');
+                }
+            })
+            .catch(error => {
+                console.error('验证失败:', error);
+                alert('Token验证失败');
+            });
+        }
+
+        // 退出登录
+        function logout() {
+            authToken = '';
+            localStorage.removeItem('blog_token');
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('admin-bar').style.display = 'none';
+            document.getElementById('token-input').value = '';
+            fetchPosts(); // 重新以只读模式加载
+        }
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            if (authToken) {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('admin-bar').style.display = 'flex';
+                fetchPosts();
+            } else {
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('admin-bar').style.display = 'none';
+                fetchPosts(); // 只读模式
+            }
+        }
+
+        // 获取所有文章
         async function fetchPosts() {
             try {
                 const response = await fetch(
@@ -402,7 +532,6 @@
                 
                 for (const item of files) {
                     if (item.type === 'dir') {
-                        // 获取文件夹内容
                         const folderResponse = await fetch(item.url);
                         if (folderResponse.ok) {
                             const folderFiles = await folderResponse.json();
@@ -419,7 +548,6 @@
                     }
                 }
                 
-                // 处理根目录文件
                 const processedRootFiles = rootFiles.map(file => {
                     const info = parseFileName(file.name);
                     return {
@@ -429,7 +557,6 @@
                     };
                 });
                 
-                // 处理文件夹中的文件
                 const allFiles = [...processedRootFiles];
                 for (const [folderName, folderFiles] of Object.entries(folders)) {
                     const processedFolderFiles = folderFiles.map(file => {
@@ -443,19 +570,17 @@
                     allFiles.push(...processedFolderFiles);
                 }
                 
-                // 排序：按日期降序，然后按order升序
                 allFiles.sort((a, b) => {
                     if (a.date && b.date) {
                         if (a.date !== b.date) {
-                            return b.date.localeCompare(a.date); // 日期降序
+                            return b.date.localeCompare(a.date);
                         }
                     }
-                    return a.order - b.order; // order升序
+                    return a.order - b.order;
                 });
                 
                 updateNavigation(allFiles, folders);
                 
-                // 默认加载第一篇文章
                 if (allFiles.length > 0) {
                     loadPost(allFiles[0].original, allFiles[0].folder);
                 } else {
@@ -469,7 +594,7 @@
             }
         }
 
-        // 更新导航栏 - 支持多级目录和折叠
+        // 更新导航栏
         function updateNavigation(files, folders) {
             const navList = document.getElementById('nav-list');
             
@@ -480,7 +605,6 @@
             
             let html = '';
             
-            // 添加根目录文件
             const rootFiles = files.filter(file => !file.folder);
             if (rootFiles.length > 0) {
                 html += '<div class="nav-folder">';
@@ -493,7 +617,6 @@
                 html += '</div></div>';
             }
             
-            // 添加文件夹
             for (const [folderName, folderFiles] of Object.entries(folders)) {
                 const folderFilesInfo = files.filter(file => file.folder === folderName);
                 html += `<div class="nav-folder" data-folder="${folderName}">`;
@@ -513,7 +636,6 @@
         function toggleFolder(element) {
             const folder = element.parentElement;
             folder.classList.toggle('collapsed');
-            const icon = element.querySelector('span') || element;
             if (folder.classList.contains('collapsed')) {
                 element.innerHTML = element.innerHTML.replace('▼', '▶');
             } else {
@@ -554,6 +676,10 @@
 
         // 显示编辑器
         function showEditor() {
+            if (!authToken) {
+                alert('请先登录管理账号');
+                return;
+            }
             document.getElementById('post-list').style.display = 'none';
             document.getElementById('editor').style.display = 'block';
             document.getElementById('post-title').value = '';
@@ -567,10 +693,85 @@
             document.getElementById('post-list').style.display = 'block';
         }
 
-        // 保存文章（只读模式下显示提示）
-        function savePost() {
-            alert('当前为只读模式，无法保存文章。\n如需编辑功能，请配置GitHub Token。');
-            hideEditor();
+        // 保存文章 - 完整实现
+        async function savePost() {
+            if (!authToken) {
+                alert('请先登录');
+                return;
+            }
+            
+            const title = document.getElementById('post-title').value.trim();
+            const folder = document.getElementById('post-folder').value.trim();
+            const content = document.getElementById('post-content').value.trim();
+            
+            if (!title) {
+                alert('请输入文章标题');
+                return;
+            }
+            
+            if (!content) {
+                alert('请输入文章内容');
+                return;
+            }
+
+            try {
+                // 生成文件名
+                const now = new Date();
+                const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+                const filename = `${dateStr}-${title}.md`;
+                
+                // 构造文件路径
+                let filePath = `posts/${filename}`;
+                if (folder) {
+                    filePath = `posts/${folder}/${filename}`;
+                }
+                
+                // 检查文件是否已存在
+                let sha = null;
+                try {
+                    const checkUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${filePath}`;
+                    const checkResponse = await fetch(checkUrl, {
+                        headers: {
+                            'Authorization': `token ${authToken}`
+                        }
+                    });
+                    
+                    if (checkResponse.ok) {
+                        const existingFile = await checkResponse.json();
+                        sha = existingFile.sha;
+                    }
+                } catch (e) {
+                    // 文件不存在，正常创建
+                }
+
+                // 保存文件
+                const saveUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${filePath}`;
+                const response = await fetch(saveUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: sha ? `Update post: ${title}` : `Create post: ${title}`,
+                        content: utf8ToBase64(content),
+                        sha: sha
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('保存成功！');
+                    hideEditor();
+                    fetchPosts(); // 刷新文章列表
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '保存失败');
+                }
+                
+            } catch (error) {
+                console.error('保存失败:', error);
+                alert(`保存失败: ${error.message}`);
+            }
         }
 
         // 切换侧边栏
@@ -583,11 +784,8 @@
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            // 绑定侧边栏切换事件
             document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
-            
-            // 初始化文章列表
-            fetchPosts();
+            checkLoginStatus();
         });
     </script>
 </body>
