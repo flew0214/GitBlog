@@ -11,6 +11,9 @@ GitBlog/
 │   └── my-first-post.md
 └── README.md
 
+## 地址
+https://flew0214.github.io/GitBlog/
+
 ## 0901 第一版成功
 1. 动态增加Posts文章
 2. 解决了编码问题base64→utf-8
@@ -24,5 +27,6 @@ GitBlog/
 4. 左侧栏可收缩
 
 
+cd GitBlog
 
 
