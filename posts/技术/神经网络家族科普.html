@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神经网络大家族科普</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .network-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .network-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+            padding-left: 15px;
+        }
+        
+        .network-diagram {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            min-height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .description {
+            color: #2d3748;
+            line-height: 1.8;
+            margin: 15px 0;
+        }
+        
+        .features {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .features h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .features ul {
+            margin-left: 20px;
+            color: #4a5568;
+        }
+        
+        .features li {
+            margin: 5px 0;
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+            margin: 40px 0;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #667eea;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 神经网络大家族科普</h1>
+        
+        <!-- 前馈神经网络 -->
+        <div class="network-card">
+            <h2>1. 前馈神经网络 (Feedforward Neural Network, FNN)</h2>
+            <div class="network-diagram">
+                <svg width="400" height="250" viewBox="0 0 400 250">
+                    <!-- 输入层 -->
+                    <g id="input-layer">
+                        <circle cx="50" cy="50" r="20" fill="#4299e1" stroke="#2b6cb1" stroke-width="2"/>
+                        <circle cx="50" cy="125" r="20" fill="#4299e1" stroke="#2b6cb1" stroke-width="2"/>
+                        <circle cx="50" cy="200" r="20" fill="#4299e1" stroke="#2b6cb1" stroke-width="2"/>
+                        <text x="50" y="235" text-anchor="middle" fill="#333">输入层</text>
+                    </g>
+                    
+                    <!-- 隐藏层 -->
+                    <g id="hidden-layer">
+                        <circle cx="200" cy="40" r="20" fill="#48bb78" stroke="#2f855a" stroke-width="2"/>
+                        <circle cx="200" cy="100" r="20" fill="#48bb78" stroke="#2f855a" stroke-width="2"/>
+                        <circle cx="200" cy="160" r="20" fill="#48bb78" stroke="#2f855a" stroke-width="2"/>
+                        <circle cx="200" cy="220" r="20" fill="#48bb78" stroke="#2f855a" stroke-width="2"/>
+                        <text x="200" y="245" text-anchor="middle" fill="#333">隐藏层</text>
+                    </g>
+                    
+                    <!-- 输出层 -->
+                    <g id="output-layer">
+                        <circle cx="350" cy="100" r="20" fill="#ed8936" stroke="#c05621" stroke-width="2"/>
+                        <circle cx="350" cy="160" r="20" fill="#ed8936" stroke="#c05621" stroke-width="2"/>
+                        <text x="350" y="235" text-anchor="middle" fill="#333">输出层</text>
+                    </g>
+                    
+                    <!-- 连接线 -->
+                    <g id="connections" stroke="#999" stroke-width="1" opacity="0.6">
+                        <!-- 输入到隐藏 -->
+                        <line x1="70" y1="50" x2="180" y2="40"/>
+                        <line x1="70" y1="50" x2="180" y2="100"/>
+                        <line x1="70" y1="50" x2="180" y2="160"/>
+                        <line x1="70" y1="50" x2="180" y2="220"/>
+                        
+                        <line x1="70" y1="125" x2="180" y2="40"/>
+                        <line x1="70" y1="125" x2="180" y2="100"/>
+                        <line x1="70" y1="125" x2="180" y2="160"/>
+                        <line x1="70" y1="125" x2="180" y2="220"/>
+                        
+                        <line x1="70" y1="200" x2="180" y2="40"/>
+                        <line x1="70" y1="200" x2="180" y2="100"/>
+                        <line x1="70" y1="200" x2="180" y2="160"/>
+                        <line x1="70" y1="200" x2="180" y2="220"/>
+                        
+                        <!-- 隐藏到输出 -->
+                        <line x1="220" y1="40" x2="330" y2="100"/>
+                        <line x1="220" y1="40" x2="330" y2="160"/>
+                        <line x1="220" y1="100" x2="330" y2="100"/>
+                        <line x1="220" y1="100" x2="330" y2="160"/>
+                        <line x1="220" y1="160" x2="330" y2="100"/>
+                        <line x1="220" y1="160" x2="330" y2="160"/>
+                        <line x1="220" y1="220" x2="330" y2="100"/>
+                        <line x1="220" y1="220" x2="330" y2="160"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>最基础的神经网络，信息单向流动，从输入层经过隐藏层到达输出层。
+            </div>
+            <div class="features">
+                <h3>工作原理：</h3>
+                <ul>
+                    <li>前向传播：输入数据通过权重矩阵和激活函数逐层传递</li>
+                    <li>反向传播：通过梯度下降算法调整权重，最小化损失函数</li>
+                    <li>应用场景：分类、回归、模式识别</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 卷积神经网络 -->
+        <div class="network-card">
+            <h2>2. 卷积神经网络 (Convolutional Neural Network, CNN)</h2>
+            <div class="network-diagram">
+                <svg width="600" height="250" viewBox="0 0 600 250">
+                    <!-- 输入图像 -->
+                    <rect x="20" y="75" width="80" height="80" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+                    <text x="60" y="180" text-anchor="middle" fill="#333" font-size="12">输入图像</text>
+                    
+                    <!-- 卷积层 -->
+                    <g id="conv-layers">
+                        <rect x="130" y="50" width="60" height="60" fill="#c8e6c9" stroke="#388e3c" stroke-width="2"/>
+                        <rect x="140" y="60" width="60" height="60" fill="#c8e6c9" stroke="#388e3c" stroke-width="2"/>
+                        <rect x="150" y="70" width="60" height="60" fill="#c8e6c9" stroke="#388e3c" stroke-width="2"/>
+                        <text x="170" y="180" text-anchor="middle" fill="#333" font-size="12">卷积层</text>
+                    </g>
+                    
+                    <!-- 池化层 -->
+                    <g id="pooling-layers">
+                        <rect x="240" y="70" width="40" height="40" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+                        <rect x="250" y="80" width="40" height="40" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+                        <text x="265" y="180" text-anchor="middle" fill="#333" font-size="12">池化层</text>
+                    </g>
+                    
+                    <!-- 更多卷积层 -->
+                    <g id="more-conv">
+                        <rect x="320" y="80" width="30" height="30" fill="#c8e6c9" stroke="#388e3c" stroke-width="2"/>
+                        <rect x="330" y="90" width="30" height="30" fill="#c8e6c9" stroke="#388e3c" stroke-width="2"/>
+                        <text x="340" y="180" text-anchor="middle" fill="#333" font-size="12">卷积层</text>
+                    </g>
+                    
+                    <!-- 全连接层 -->
+                    <g id="fc-layer">
+                        <circle cx="420" cy="60" r="15" fill="#ffccbc" stroke="#d84315" stroke-width="2"/>
+                        <circle cx="420" cy="100" r="15" fill="#ffccbc" stroke="#d84315" stroke-width="2"/>
+                        <circle cx="420" cy="140" r="15" fill="#ffccbc" stroke="#d84315" stroke-width="2"/>
+                        <text x="420" y="180" text-anchor="middle" fill="#333" font-size="12">全连接</text>
+                    </g>
+                    
+                    <!-- 输出 -->
+                    <g id="output">
+                        <circle cx="520" cy="80" r="15" fill="#ce93d8" stroke="#6a1b9a" stroke-width="2"/>
+                        <circle cx="520" cy="120" r="15" fill="#ce93d8" stroke="#6a1b9a" stroke-width="2"/>
+                        <text x="520" y="180" text-anchor="middle" fill="#333" font-size="12">输出</text>
+                    </g>
+                    
+                    <!-- 箭头 -->
+                    <g id="arrows" stroke="#666" stroke-width="2" fill="#666">
+                        <path d="M 100 115 L 125 115 L 120 110 M 125 115 L 120 120"/>
+                        <path d="M 210 100 L 235 100 L 230 95 M 235 100 L 230 105"/>
+                        <path d="M 290 100 L 315 100 L 310 95 M 315 100 L 310 105"/>
+                        <path d="M 360 100 L 395 100 L 390 95 M 395 100 L 390 105"/>
+                        <path d="M 445 100 L 495 100 L 490 95 M 495 100 L 490 105"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>专门用于处理图像数据，通过卷积操作提取局部特征，具有参数共享和稀疏连接的特点。
+            </div>
+            <div class="features">
+                <h3>核心组件：</h3>
+                <ul>
+                    <li><strong>卷积层：</strong>使用滤波器提取特征图</li>
+                    <li><strong>池化层：</strong>降维和提取主要特征</li>
+                    <li><strong>全连接层：</strong>整合特征进行分类</li>
+                    <li><strong>应用场景：</strong>图像分类、目标检测、人脸识别、医学影像分析</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 循环神经网络 -->
+        <div class="network-card">
+            <h2>3. 循环神经网络 (Recurrent Neural Network, RNN)</h2>
+            <div class="network-diagram">
+                <svg width="500" height="250" viewBox="0 0 500 250">
+                    <!-- 展开的RNN结构 -->
+                    <g id="rnn-unrolled">
+                        <!-- 时间步 t-1 -->
+                        <g transform="translate(50, 0)">
+                            <rect x="0" y="80" width="60" height="60" fill="#e1f5fe" stroke="#0277bd" stroke-width="2" rx="5"/>
+                            <text x="30" y="115" text-anchor="middle" fill="#333" font-size="14">RNN</text>
+                            <text x="30" y="170" text-anchor="middle" fill="#666" font-size="12">t-1</text>
+                            <!-- 输入 -->
+                            <circle cx="30" cy="40" r="12" fill="#b3e5fc" stroke="#0277bd" stroke-width="1"/>
+                            <text x="30" y="20" text-anchor="middle" fill="#333" font-size="10">x(t-1)</text>
+                            <!-- 输出 -->
+                            <circle cx="30" cy="180" r="12" fill="#ffccbc" stroke="#d84315" stroke-width="1"/>
+                            <text x="30" y="210" text-anchor="middle" fill="#333" font-size="10">y(t-1)</text>
+                            <!-- 连接线 -->
+                            <line x1="30" y1="52" x2="30" y2="80" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+                            <line x1="30" y1="140" x2="30" y2="168" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+                        </g>
+                        
+                        <!-- 时间步 t -->
+                        <g transform="translate(180, 0)">
+                            <rect x="0" y="80" width="60" height="60" fill="#e1f5fe" stroke="#0277bd" stroke-width="2" rx="5"/>
+                            <text x="30" y="115" text-anchor="middle" fill="#333" font-size="14">RNN</text>
+                            <text x="30" y="170" text-anchor="middle" fill="#666" font-size="12">t</text>
+                            <!-- 输入 -->
+                            <circle cx="30" cy="40" r="12" fill="#b3e5fc" stroke="#0277bd" stroke-width="1"/>
+                            <text x="30" y="20" text-anchor="middle" fill="#333" font-size="10">x(t)</text>
+                            <!-- 输出 -->
+                            <circle cx="30" cy="180" r="12" fill="#ffccbc" stroke="#d84315" stroke-width="1"/>
+                            <text x="30" y="210" text-anchor="middle" fill="#333" font-size="10">y(t)</text>
+                            <!-- 连接线 -->
+                            <line x1="30" y1="52" x2="30" y2="80" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+                            <line x1="30" y1="140" x2="30" y2="168" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+                        </g>
+                        
+                        <!-- 时间步 t+1 -->
+                        <g transform="translate(310, 0)">
+                            <rect x="0" y="80" width="60" height="60" fill="#e1f5fe" stroke="#0277bd" stroke-width="2" rx="5"/>
+                            <text x="30" y="115" text-anchor="middle" fill="#333" font-size="14">RNN</text>
+                            <text x="30" y="170" text-anchor="middle" fill="#666" font-size="12">t+1</text>
+                            <!-- 输入 -->
+                            <circle cx="30" cy="40" r="12" fill="#b3e5fc" stroke="#0277bd" stroke-width="1"/>
+                            <text x="30" y="20" text-anchor="middle" fill="#333" font-size="10">x(t+1)</text>
+                            <!-- 输出 -->
+                            <circle cx="30" cy="180" r="12" fill="#ffccbc" stroke="#d84315" stroke-width="1"/>
+                            <text x="30" y="210" text-anchor="middle" fill="#333" font-size="10">y(t+1)</text>
+                            <!-- 连接线 -->
+                            <line x1="30" y1="52" x2="30" y2="80" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+                            <line x1="30" y1="140" x2="30" y2="168" stroke="#666" stroke-width="1" marker-end="url(#arrowhead)"/>
+                        </g>
+                        
+                        <!-- 隐藏状态传递 -->
+                        <g id="hidden-state" stroke="#f44336" stroke-width="2" fill="none">
+                            <path d="M 110 110 L 175 110" marker-end="url(#arrowhead-red)"/>
+                            <path d="M 240 110 L 305 110" marker-end="url(#arrowhead-red)"/>
+                            <path d="M 370 110 L 420 110" stroke-dasharray="5,5" marker-end="url(#arrowhead-red)"/>
+                        </g>
+                        
+                        <text x="250" y="240" text-anchor="middle" fill="#f44336" font-size="12">隐藏状态传递</text>
+                    </g>
+                    
+                    <!-- 定义箭头 -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+                        </marker>
+                        <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#f44336"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>具有记忆功能，能够处理序列数据，当前时刻的输出依赖于之前的隐藏状态。
+            </div>
+            <div class="features">
+                <h3>工作原理：</h3>
+                <ul>
+                    <li><strong>隐藏状态：</strong>在时间步之间传递信息</li>
+                    <li><strong>权重共享：</strong>所有时间步共享相同的权重</li>
+                    <li><strong>梯度问题：</strong>容易出现梯度消失或爆炸</li>
+                    <li><strong>应用场景：</strong>自然语言处理、时间序列预测、语音识别</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- LSTM网络 -->
+        <div class="network-card">
+            <h2>4. 长短期记忆网络 (Long Short-Term Memory, LSTM)</h2>
+            <div class="network-diagram">
+                <svg width="550" height="280" viewBox="0 0 550 280">
+                    <!-- LSTM单元详细结构 -->
+                    <g id="lstm-cell">
+                        <!-- 主框架 -->
+                        <rect x="100" y="50" width="350" height="150" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2" rx="10"/>
+                        <text x="275" y="35" text-anchor="middle" fill="#7b1fa2" font-size="16" font-weight="bold">LSTM Cell</text>
+                        
+                        <!-- 细胞状态线 -->
+                        <line x1="50" y1="80" x2="500" y2="80" stroke="#4a148c" stroke-width="3"/>
+                        <text x="525" y="85" fill="#4a148c" font-size="12">C(t)</text>
+                        <text x="25" y="85" fill="#4a148c" font-size="12">C(t-1)</text>
+                        
+                        <!-- 遗忘门 -->
+                        <g id="forget-gate">
+                            <rect x="130" y="100" width="60" height="40" fill="#ffebee" stroke="#c62828" stroke-width="2" rx="5"/>
+                            <text x="160" y="125" text-anchor="middle" fill="#c62828" font-size="12">遗忘门</text>
+                            <circle cx="160" cy="80" r="8" fill="#ffcdd2" stroke="#c62828" stroke-width="1"/>
+                            <text x="160" y="84" text-anchor="middle" fill="#333" font-size="10">×</text>
+                        </g>
+                        
+                        <!-- 输入门 -->
+                        <g id="input-gate">
+                            <rect x="220" y="100" width="60" height="40" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2" rx="5"/>
+                            <text x="250" y="125" text-anchor="middle" fill="#2e7d32" font-size="12">输入门</text>
+                            <circle cx="250" cy="80" r="8" fill="#c8e6c9" stroke="#2e7d32" stroke-width="1"/>
+                            <text x="250" y="84" text-anchor="middle" fill="#333" font-size="10">×</text>
+                        </g>
+                        
+                        <!-- 候选值 -->
+                        <g id="candidate">
+                            <rect x="220" y="150" width="60" height="30" fill="#e3f2fd" stroke="#1565c0" stroke-width="2" rx="5"/>
+                            <text x="250" y="170" text-anchor="middle" fill="#1565c0" font-size="11">tanh</text>
+                        </g>
+                        
+                        <!-- 输出门 -->
+                        <g id="output-gate">
+                            <rect x="310" y="100" width="60" height="40" fill="#fff3e0" stroke="#e65100" stroke-width="2" rx="5"/>
+                            <text x="340" y="125" text-anchor="middle" fill="#e65100" font-size="12">输出门</text>
+                            <circle cx="340" cy="80" r="8" fill="#ffe0b2" stroke="#e65100" stroke-width="1"/>
+                            <text x="340" y="84" text-anchor="middle" fill="#333" font-size="10">×</text>
+                        </g>
+                        
+                        <!-- 输入输出 -->
+                        <g id="io">
+                            <circle cx="60" cy="160" r="15" fill="#b3e5fc" stroke="#0277bd" stroke-width="2"/>
+                            <text x="60" y="165" text-anchor="middle" fill="#333" font-size="10">x(t)</text>
+                            <text x="60" y="190" text-anchor="middle" fill="#666" font-size="10">输入</text>
+                            
+                            <circle cx="60" cy="120" r="15" fill="#c5e1a5" stroke="#558b2f" stroke-width="2"/>
+                            <text x="60" y="125" text-anchor="middle" fill="#333" font-size="10">h(t-1)</text>
+                            
+                            <circle cx="490" cy="160" r="15" fill="#ffccbc" stroke="#d84315" stroke-width="2"/>
+                            <text x="490" y="165" text-anchor="middle" fill="#333" font-size="10">h(t)</text>
+                            <text x="490" y="190" text-anchor="middle" fill="#666" font-size="10">输出</text>
+                        </g>
+                        
+                        <!-- 连接线 -->
+                        <g stroke="#666" stroke-width="1" fill="none">
+                            <path d="M 75 160 L 100 160"/>
+                            <path d="M 75 120 L 100 120"/>
+                            <path d="M 380 120 L 475 160"/>
+                        </g>
+                    </g>
+                    
+                    <!-- 信息流说明 -->
+                    <g id="legend" transform="translate(50, 220)">
+                        <text x="0" y="0" fill="#666" font-size="12">关键组件：</text>
+                        <circle cx="80" cy="-5" r="5" fill="#c62828"/>
+                        <text x="90" y="0" fill="#666" font-size="11">遗忘门(f)</text>
+                        <circle cx="160" cy="-5" r="5" fill="#2e7d32"/>
+                        <text x="170" y="0" fill="#666" font-size="11">输入门(i)</text>
+                        <circle cx="240" cy="-5" r="5" fill="#e65100"/>
+                        <text x="250" y="0" fill="#666" font-size="11">输出门(o)</text>
+                        <rect x="320" y="-10" width="10" height="10" fill="#1565c0"/>
+                        <text x="335" y="0" fill="#666" font-size="11">候选状态(C̃)</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>RNN的改进版本，通过门控机制解决了长期依赖问题。
+            </div>
+            <div class="features">
+                <h3>核心机制：</h3>
+                <ul>
+                    <li><strong>遗忘门：</strong>决定丢弃哪些信息</li>
+                    <li><strong>输入门：</strong>决定存储哪些新信息</li>
+                    <li><strong>输出门：</strong>决定输出哪些信息</li>
+                    <li><strong>细胞状态：</strong>长期记忆的载体</li>
+                    <li><strong>应用场景：</strong>机器翻译、文本生成、语音合成、股票预测</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- GAN网络 -->
+        <div class="network-card">
+            <h2>5. 生成对抗网络 (Generative Adversarial Network, GAN)</h2>
+            <div class="network-diagram">
+                <svg width="500" height="300" viewBox="0 0 500 300">
+                    <!-- 生成器 -->
+                    <g id="generator">
+                        <rect x="50" y="100" width="120" height="80" fill="#c8e6c9" stroke="#388e3c" stroke-width="2" rx="10"/>
+                        <text x="110" y="130" text-anchor="middle" fill="#1b5e20" font-size="14" font-weight="bold">生成器 G</text>
+                        <text x="110" y="150" text-anchor="middle" fill="#388e3c" font-size="11">Generator</text>
+                        <text x="110" y="165" text-anchor="middle" fill="#666" font-size="10">生成假数据</text>
+                        
+                        <!-- 噪声输入 -->
+                        <circle cx="30" cy="140" r="15" fill="#e1bee7" stroke="#6a1b9a" stroke-width="2"/>
+                        <text x="30" y="145" text-anchor="middle" fill="#333" font-size="10">z</text>
+                        <text x="30" y="170" text-anchor="middle" fill="#666" font-size="9">噪声</text>
+                        <line x1="45" y1="140" x2="50" y2="140" stroke="#666" stroke-width="2" marker-end="url(#arrow)"/>
+                    </g>
+                    
+                    <!-- 判别器 -->
+                    <g id="discriminator">
+                        <rect x="280" y="100" width="120" height="80" fill="#ffccbc" stroke="#d84315" stroke-width="2" rx="10"/>
+                        <text x="340" y="130" text-anchor="middle" fill="#bf360c" font-size="14" font-weight="bold">判别器 D</text>
+                        <text x="340" y="150" text-anchor="middle" fill="#d84315" font-size="11">Discriminator</text>
+                        <text x="340" y="165" text-anchor="middle" fill="#666" font-size="10">判断真假</text>
+                    </g>
+                    
+                    <!-- 真实数据 -->
+                    <g id="real-data">
+                        <rect x="200" y="20" width="80" height="40" fill="#e3f2fd" stroke="#0277bd" stroke-width="2" rx="5"/>
+                        <text x="240" y="45" text-anchor="middle" fill="#0277bd" font-size="12">真实数据</text>
+                    </g>
+                    
+                    <!-- 生成的假数据流 -->
+                    <path d="M 170 140 L 275 140" stroke="#388e3c" stroke-width="2" marker-end="url(#arrow-green)"/>
+                    <text x="220" y="135" text-anchor="middle" fill="#388e3c" font-size="10">假数据</text>
+                    
+                    <!-- 真实数据流 -->
+                    <path d="M 240 60 L 340 95" stroke="#0277bd" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                    
+                    <!-- 判别结果 -->
+                    <g id="output">
+                        <rect x="420" y="120" width="60" height="40" fill="#fff9c4" stroke="#f57f17" stroke-width="2" rx="5"/>
+                        <text x="450" y="145" text-anchor="middle" fill="#f57f17" font-size="11">真/假</text>
+                        <line x1="400" y1="140" x2="420" y2="140" stroke="#d84315" stroke-width="2" marker-end="url(#arrow)"/>
+                    </g>
+                    
+                    <!-- 反馈循环 -->
+                    <g id="feedback">
+                        <path d="M 340 180 Q 250 220 110 180" stroke="#9c27b0" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow-purple)"/>
+                        <text x="250" y="210" text-anchor="middle" fill="#9c27b0" font-size="11">反馈训练</text>
+                    </g>
+                    
+                    <!-- 对抗过程说明 -->
+                    <g id="description" transform="translate(50, 250)">
+                        <text x="0" y="0" fill="#333" font-size="12" font-weight="bold">对抗训练过程：</text>
+                        <text x="0" y="20" fill="#666" font-size="11">1. 生成器试图生成逼真的假数据骗过判别器</text>
+                        <text x="0" y="35" fill="#666" font-size="11">2. 判别器试图正确区分真实数据和生成的假数据</text>
+                        <text x="0" y="50" fill="#666" font-size="11">3. 两者相互对抗，共同进步</text>
+                    </g>
+                    
+                    <!-- 定义箭头标记 -->
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                            <path d="M 0,0 L 10,5 L 0,10 z" fill="#666"/>
+                        </marker>
+                        <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                            <path d="M 0,0 L 10,5 L 0,10 z" fill="#388e3c"/>
+                        </marker>
+                        <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                            <path d="M 0,0 L 10,5 L 0,10 z" fill="#0277bd"/>
+                        </marker>
+                        <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                            <path d="M 0,0 L 10,5 L 0,10 z" fill="#9c27b0"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>由生成器和判别器两个网络组成，通过对抗训练生成逼真的数据。
+            </div>
+            <div class="features">
+                <h3>工作原理：</h3>
+                <ul>
+                    <li><strong>生成器：</strong>从随机噪声生成假数据</li>
+                    <li><strong>判别器：</strong>区分真实数据和生成数据</li>
+                    <li><strong>对抗训练：</strong>两个网络相互竞争，不断提升</li>
+                    <li><strong>应用场景：</strong>图像生成、风格迁移、数据增强、超分辨率</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Transformer -->
+        <div class="network-card">
+            <h2>6. Transformer (注意力机制网络)</h2>
+            <div class="network-diagram">
+                <svg width="550" height="350" viewBox="0 0 550 350">
+                    <!-- 编码器部分 -->
+                    <g id="encoder">
+                        <rect x="50" y="50" width="200" height="250" fill="#e8eaf6" stroke="#3f51b5" stroke-width="2" rx="10"/>
+                        <text x="150" y="35" text-anchor="middle" fill="#3f51b5" font-size="14" font-weight="bold">编码器 (Encoder)</text>
+                        
+                        <!-- Multi-Head Attention -->
+                        <rect x="70" y="70" width="160" height="50" fill="#c5cae9" stroke="#303f9f" stroke-width="2" rx="5"/>
+                        <text x="150" y="100" text-anchor="middle" fill="#1a237e" font-size="11">Multi-Head Attention</text>
+                        
+                        <!-- Add & Norm -->
+                        <rect x="70" y="130" width="160" height="30" fill="#9fa8da" stroke="#303f9f" stroke-width="1" rx="3"/>
+                        <text x="150" y="150" text-anchor="middle" fill="#fff" font-size="10">Add & Norm</text>
+                        
+                        <!-- Feed Forward -->
+                        <rect x="70" y="170" width="160" height="50" fill="#c5cae9" stroke="#303f9f" stroke-width="2" rx="5"/>
+                        <text x="150" y="200" text-anchor="middle" fill="#1a237e" font-size="11">Feed Forward</text>
+                        
+                        <!-- Add & Norm -->
+                        <rect x="70" y="230" width="160" height="30" fill="#9fa8da" stroke="#303f9f" stroke-width="1" rx="3"/>
+                        <text x="150" y="250" text-anchor="middle" fill="#fff" font-size="10">Add & Norm</text>
+                        
+                        <!-- 位置编码 -->
+                        <rect x="70" y="270" width="160" height="25" fill="#7986cb" stroke="#303f9f" stroke-width="1" rx="3"/>
+                        <text x="150" y="287" text-anchor="middle" fill="#fff" font-size="10">位置编码</text>
+                    </g>
+                    
+                    <!-- 解码器部分 -->
+                    <g id="decoder">
+                        <rect x="300" y="50" width="200" height="250" fill="#fce4ec" stroke="#c2185b" stroke-width="2" rx="10"/>
+                        <text x="400" y="35" text-anchor="middle" fill="#c2185b" font-size="14" font-weight="bold">解码器 (Decoder)</text>
+                        
+                        <!-- Masked Multi-Head Attention -->
+                        <rect x="320" y="70" width="160" height="40" fill="#f8bbd0" stroke="#880e4f" stroke-width="2" rx="5"/>
+                        <text x="400" y="90" text-anchor="middle" fill="#880e4f" font-size="10">Masked</text>
+                        <text x="400" y="102" text-anchor="middle" fill="#880e4f" font-size="10">Multi-Head Attention</text>
+                        
+                        <!-- Add & Norm -->
+                        <rect x="320" y="115" width="160" height="25" fill="#f48fb1" stroke="#880e4f" stroke-width="1" rx="3"/>
+                        <text x="400" y="132" text-anchor="middle" fill="#fff" font-size="10">Add & Norm</text>
+                        
+                        <!-- Cross Attention -->
+                        <rect x="320" y="145" width="160" height="40" fill="#f8bbd0" stroke="#880e4f" stroke-width="2" rx="5"/>
+                        <text x="400" y="165" text-anchor="middle" fill="#880e4f" font-size="10">Cross Attention</text>
+                        
+                        <!-- Add & Norm -->
+                        <rect x="320" y="190" width="160" height="25" fill="#f48fb1" stroke="#880e4f" stroke-width="1" rx="3"/>
+                        <text x="400" y="207" text-anchor="middle" fill="#fff" font-size="10">Add & Norm</text>
+                        
+                        <!-- Feed Forward -->
+                        <rect x="320" y="220" width="160" height="40" fill="#f8bbd0" stroke="#880e4f" stroke-width="2" rx="5"/>
+                        <text x="400" y="245" text-anchor="middle" fill="#880e4f" font-size="11">Feed Forward</text>
+                        
+                        <!-- Add & Norm -->
+                        <rect x="320" y="265" width="160" height="25" fill="#f48fb1" stroke="#880e4f" stroke-width="1" rx="3"/>
+                        <text x="400" y="282" text-anchor="middle" fill="#fff" font-size="10">Add & Norm</text>
+                    </g>
+                    
+                    <!-- 连接线 -->
+                    <g stroke="#666" stroke-width="2" fill="none">
+                        <!-- 编码器到解码器的连接 -->
+                        <path d="M 250 165 L 320 165" marker-end="url(#arrow-gray)"/>
+                        <text x="285" y="160" text-anchor="middle" fill="#666" font-size="10">K,V</text>
+                    </g>
+                    
+                    <!-- 输入输出 -->
+                    <g id="io">
+                        <ellipse cx="150" cy="320" rx="40" ry="15" fill="#a5d6a7" stroke="#388e3c" stroke-width="2"/>
+                        <text x="150" y="325" text-anchor="middle" fill="#1b5e20" font-size="11">输入序列</text>
+                        
+                        <ellipse cx="400" cy="320" rx="40" ry="15" fill="#ffab91" stroke="#d84315" stroke-width="2"/>
+                        <text x="400" y="325" text-anchor="middle" fill="#bf360c" font-size="11">输出序列</text>
+                    </g>
+                    
+                    <!-- 注意力机制示意 -->
+                    <g id="attention-visual" transform="translate(70, 320)">
+                        <text x="0" y="20" fill="#666" font-size="11" font-weight="bold">自注意力机制：</text>
+                        <text x="140" y="20" fill="#666" font-size="10">Q(查询) × K(键) × V(值)</text>
+                    </g>
+                    
+                    <defs>
+                        <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                            <path d="M 0,0 L 10,5 L 0,10 z" fill="#666"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>完全基于注意力机制，摒弃了RNN和CNN结构，能够并行处理序列数据。
+            </div>
+            <div class="features">
+                <h3>核心创新：</h3>
+                <ul>
+                    <li><strong>自注意力机制：</strong>直接建模序列内部的依赖关系</li>
+                    <li><strong>多头注意力：</strong>从不同角度学习特征表示</li>
+                    <li><strong>位置编码：</strong>为模型提供位置信息</li>
+                    <li><strong>并行计算：</strong>大幅提升训练速度</li>
+                    <li><strong>应用场景：</strong>BERT、GPT、机器翻译、文本理解</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 图神经网络 -->
+        <div class="network-card">
+            <h2>7. 图神经网络 (Graph Neural Network, GNN)</h2>
+            <div class="network-diagram">
+                <svg width="500" height="300" viewBox="0 0 500 300">
+                    <!-- 原始图结构 -->
+                    <g id="original-graph">
+                        <text x="100" y="30" text-anchor="middle" fill="#333" font-size="12">输入图</text>
+                        <!-- 节点 -->
+                        <circle cx="60" cy="80" r="15" fill="#81c784" stroke="#388e3c" stroke-width="2"/>
+                        <text x="60" y="85" text-anchor="middle" fill="#fff" font-size="10">A</text>
+                        
+                        <circle cx="140" cy="80" r="15" fill="#81c784" stroke="#388e3c" stroke-width="2"/>
+                        <text x="140" y="85" text-anchor="middle" fill="#fff" font-size="10">B</text>
+                        
+                        <circle cx="100" cy="140" r="15" fill="#81c784" stroke="#388e3c" stroke-width="2"/>
+                        <text x="100" y="145" text-anchor="middle" fill="#fff" font-size="10">C</text>
+                        
+                        <circle cx="60" cy="200" r="15" fill="#81c784" stroke="#388e3c" stroke-width="2"/>
+                        <text x="60" y="205" text-anchor="middle" fill="#fff" font-size="10">D</text>
+                        
+                        <circle cx="140" cy="200" r="15" fill="#81c784" stroke="#388e3c" stroke-width="2"/>
+                        <text x="140" y="205" text-anchor="middle" fill="#fff" font-size="10">E</text>
+                        
+                        <!-- 边 -->
+                        <g stroke="#666" stroke-width="2">
+                            <line x1="75" y1="80" x2="125" y2="80"/>
+                            <line x1="65" y1="95" x2="95" y2="125"/>
+                            <line x1="145" y1="95" x2="105" y2="125"/>
+                            <line x1="100" y1="155" x2="65" y2="185"/>
+                            <line x1="100" y1="155" x2="135" y2="185"/>
+                            <line x1="75" y1="200" x2="125" y2="200"/>
+                        </g>
+                    </g>
+                    
+                    <!-- 消息传递过程 -->
+                    <g id="message-passing">
+                        <text x="250" y="30" text-anchor="middle" fill="#333" font-size="12">消息传递</text>
+                        <path d="M 180 140 L 210 140" stroke="#ff6f00" stroke-width="3" marker-end="url(#arrow-orange)"/>
+                        
+                        <!-- 聚合示意 -->
+                        <rect x="220" y="100" width="80" height="80" fill="#fff3e0" stroke="#ff6f00" stroke-width="2" rx="10"/>
+                        <text x="260" y="130" text-anchor="middle" fill="#ff6f00" font-size="11">聚合</text>
+                        <text x="260" y="145" text-anchor="middle" fill="#ff6f00" font-size="11">邻居信息</text>
+                        <text x="260" y="160" text-anchor="middle" fill="#ff6f00" font-size="11">更新节点</text>
+                    </g>
+                    
+                    <!-- 更新后的图 -->
+                    <g id="updated-graph">
+                        <text x="400" y="30" text-anchor="middle" fill="#333" font-size="12">输出特征</text>
+                        <path d="M 310 140 L 340 140" stroke="#ff6f00" stroke-width="3" marker-end="url(#arrow-orange)"/>
+                        
+                        <!-- 更新后的节点 -->
+                        <circle cx="360" cy="80" r="18" fill="#4fc3f7" stroke="#0277bd" stroke-width="2"/>
+                        <text x="360" y="85" text-anchor="middle" fill="#fff" font-size="10">A'</text>
+                        
+                        <circle cx="440" cy="80" r="18" fill="#4fc3f7" stroke="#0277bd" stroke-width="2"/>
+                        <text x="440" y="85" text-anchor="middle" fill="#fff" font-size="10">B'</text>
+                        
+                        <circle cx="400" cy="140" r="18" fill="#4fc3f7" stroke="#0277bd" stroke-width="2"/>
+                        <text x="400" y="145" text-anchor="middle" fill="#fff" font-size="10">C'</text>
+                        
+                        <circle cx="360" cy="200" r="18" fill="#4fc3f7" stroke="#0277bd" stroke-width="2"/>
+                        <text x="360" y="205" text-anchor="middle" fill="#fff" font-size="10">D'</text>
+                        
+                        <circle cx="440" cy="200" r="18" fill="#4fc3f7" stroke="#0277bd" stroke-width="2"/>
+                        <text x="440" y="205" text-anchor="middle" fill="#fff" font-size="10">E'</text>
+                        
+                        <!-- 边（带特征） -->
+                        <g stroke="#0277bd" stroke-width="2" opacity="0.6">
+                            <line x1="378" y1="80" x2="422" y2="80"/>
+                            <line x1="365" y1="98" x2="395" y2="122"/>
+                            <line x1="435" y1="98" x2="405" y2="122"/>
+                            <line x1="400" y1="158" x2="365" y2="182"/>
+                            <line x1="400" y1="158" x2="435" y2="182"/>
+                            <line x1="378" y1="200" x2="422" y2="200"/>
+                        </g>
+                    </g>
+                    
+                    <!-- GNN公式 -->
+                    <g id="formula" transform="translate(50, 250)">
+                        <rect x="0" y="0" width="400" height="40" fill="#f5f5f5" stroke="#999" stroke-width="1" rx="5"/>
+                        <text x="200" y="25" text-anchor="middle" fill="#333" font-size="12">
+                            h_v' = σ(W_self · h_v + Σ(W_neighbor · h_u))  u∈N(v)
+                        </text>
+                    </g>
+                    
+                    <defs>
+                        <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                            <path d="M 0,0 L 10,5 L 0,10 z" fill="#ff6f00"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>专门处理图结构数据，通过消息传递机制在节点间传播信息。
+            </div>
+            <div class="features">
+                <h3>核心概念：</h3>
+                <ul>
+                    <li><strong>节点嵌入：</strong>学习节点的向量表示</li>
+                    <li><strong>消息传递：</strong>节点间信息交换机制</li>
+                    <li><strong>聚合函数：</strong>整合邻居节点信息</li>
+                    <li><strong>更新函数：</strong>更新节点特征表示</li>
+                    <li><strong>应用场景：</strong>社交网络分析、推荐系统、分子结构预测、知识图谱</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 自编码器 -->
+        <div class="network-card">
+            <h2>8. 自编码器 (Autoencoder, AE)</h2>
+            <div class="network-diagram">
+                <svg width="500" height="250" viewBox="0 0 500 250">
+                    <!-- 编码器部分 -->
+                    <g id="encoder-ae">
+                        <text x="100" y="30" text-anchor="middle" fill="#666" font-size="12">编码器</text>
+                        <!-- 输入层 -->
+                        <g id="input">
+                            <circle cx="50" cy="60" r="12" fill="#90caf9" stroke="#1976d2" stroke-width="2"/>
+                            <circle cx="50" cy="100" r="12" fill="#90caf9" stroke="#1976d2" stroke-width="2"/>
+                            <circle cx="50" cy="140" r="12" fill="#90caf9" stroke="#1976d2" stroke-width="2"/>
+                            <circle cx="50" cy="180" r="12" fill="#90caf9" stroke="#1976d2" stroke-width="2"/>
+                            <text x="50" y="210" text-anchor="middle" fill="#333" font-size="10">输入 x</text>
+                        </g>
+                        
+                        <!-- 隐藏层（压缩） -->
+                        <g id="hidden1">
+                            <circle cx="150" cy="80" r="12" fill="#a5d6a7" stroke="#388e3c" stroke-width="2"/>
+                            <circle cx="150" cy="120" r="12" fill="#a5d6a7" stroke="#388e3c" stroke-width="2"/>
+                            <circle cx="150" cy="160" r="12" fill="#a5d6a7" stroke="#388e3c" stroke-width="2"/>
+                        </g>
+                    </g>
+                    
+                    <!-- 潜在空间 -->
+                    <g id="latent-space">
+                        <rect x="220" y="100" width="60" height="40" fill="#ffd54f" stroke="#f57c00" stroke-width="2" rx="20"/>
+                        <text x="250" y="125" text-anchor="middle" fill="#e65100" font-size="11">潜在空间</text>
+                        <text x="250" y="165" text-anchor="middle" fill="#666" font-size="10">编码 z</text>
+                    </g>
+                    
+                    <!-- 解码器部分 -->
+                    <g id="decoder-ae">
+                        <text x="400" y="30" text-anchor="middle" fill="#666" font-size="12">解码器</text>
+                        <!-- 隐藏层（解压） -->
+                        <g id="hidden2">
+                            <circle cx="350" cy="80" r="12" fill="#a5d6a7" stroke="#388e3c" stroke-width="2"/>
+                            <circle cx="350" cy="120" r="12" fill="#a5d6a7" stroke="#388e3c" stroke-width="2"/>
+                            <circle cx="350" cy="160" r="12" fill="#a5d6a7" stroke="#388e3c" stroke-width="2"/>
+                        </g>
+                        
+                        <!-- 输出层 -->
+                        <g id="output">
+                            <circle cx="450" cy="60" r="12" fill="#ef9a9a" stroke="#c62828" stroke-width="2"/>
+                            <circle cx="450" cy="100" r="12" fill="#ef9a9a" stroke="#c62828" stroke-width="2"/>
+                            <circle cx="450" cy="140" r="12" fill="#ef9a9a" stroke="#c62828" stroke-width="2"/>
+                            <circle cx="450" cy="180" r="12" fill="#ef9a9a" stroke="#c62828" stroke-width="2"/>
+                            <text x="450" y="210" text-anchor="middle" fill="#333" font-size="10">重构 x'</text>
+                        </g>
+                    </g>
+                    
+                    <!-- 连接线 -->
+                    <g stroke="#999" stroke-width="1" opacity="0.5">
+                        <!-- 编码器连接 -->
+                        <line x1="62" y1="60" x2="138" y2="80"/>
+                        <line x1="62" y1="100" x2="138" y2="120"/>
+                        <line x1="62" y1="140" x2="138" y2="160"/>
+                        <line x1="62" y1="180" x2="138" y2="160"/>
+                        
+                        <line x1="162" y1="80" x2="220" y2="110"/>
+                        <line x1="162" y1="120" x2="220" y2="120"/>
+                        <line x1="162" y1="160" x2="220" y2="130"/>
+                        
+                        <!-- 解码器连接 -->
+                        <line x1="280" y1="110" x2="338" y2="80"/>
+                        <line x1="280" y1="120" x2="338" y2="120"/>
+                        <line x1="280" y1="130" x2="338" y2="160"/>
+                        
+                        <line x1="362" y1="80" x2="438" y2="60"/>
+                        <line x1="362" y1="120" x2="438" y2="100"/>
+                        <line x1="362" y1="160" x2="438" y2="140"/>
+                        <line x1="362" y1="160" x2="438" y2="180"/>
+                    </g>
+                    
+                    <!-- 损失函数 -->
+                    <g id="loss" transform="translate(200, 220)">
+                        <text x="0" y="0" fill="#666" font-size="11">损失函数: L = ||x - x'||²</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="description">
+                <strong>结构特点：</strong>无监督学习网络，通过编码器压缩数据，解码器重构数据，学习数据的潜在表示。
+            </div>
+            <div class="features">
+                <h3>变体与应用：</h3>
+                <ul>
+                    <li><strong>去噪自编码器：</strong>输入加噪声，学习去噪能力</li>
+                    <li><strong>变分自编码器(VAE)：</strong>引入概率分布，可生成新数据</li>
+                    <li><strong>稀疏自编码器：</strong>加入稀疏性约束</li>
+                    <li><strong>应用场景：</strong>降维、特征学习、异常检测、图像去噪</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 总结 -->
+        <div class="network-card" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+            <h2>🎯 神经网络家族总结</h2>
+            <div class="features">
+                <h3>选择合适的网络：</h3>
+                <ul>
+                    <li><strong>图像处理：</strong>CNN (卷积神经网络)</li>
+                    <li><strong>序列数据：</strong>RNN、LSTM、GRU、Transformer</li>
+                    <li><strong>生成任务：</strong>GAN、VAE</li>
+                    <li><strong>图结构数据：</strong>GNN (图神经网络)</li>
+                    <li><strong>特征学习：</strong>Autoencoder (自编码器)</li>
+                    <li><strong>通用任务：</strong>FNN (前馈神经网络)</li>
+                </ul>
+                
+                <h3 style="margin-top: 20px;">发展趋势：</h3>
+                <ul>
+                    <li>🚀 模型规模越来越大 (GPT、BERT等大模型)</li>
+                    <li>🎯 注意力机制成为主流 (Transformer统治NLP)</li>
+                    <li>🔄 多模态融合 (视觉-语言模型)</li>
+                    <li>⚡ 模型压缩与加速 (知识蒸馏、量化)</li>
+                    <li>🧠 神经架构搜索 (NAS自动设计网络)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 添加交互效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为SVG元素添加悬停效果
+            const circles = document.querySelectorAll('circle');
+            circles.forEach(circle => {
+                circle.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.2)';
+                    this.style.transition = 'transform 0.3s';
+                });
+                circle.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+            
+            // 平滑滚动
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
