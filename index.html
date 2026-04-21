@@ -776,17 +776,17 @@
             
             // 根目录文件
             const rootFiles = files.filter(file => !file.folderPath);
-            if (rootFiles.length > 0) {
-                html += '<div class="nav-folder">';
-                html += '<div class="nav-folder-header" onclick="toggleFolder(this)" style="padding-left: 15px;">📁 根目录 <span class="toggle-icon">▼</span></div>';
-                html += '<div class="nav-folder-content">';
-                for (const file of rootFiles) {
-                    const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
-                    const safeName = file.original.replace(/'/g, "\\'");
-                    html += `<li onclick="loadPost('${safeName}', '', '${file.sha || ''}')" style="padding-left: 30px;">${file.title}${dateStr}</li>`;
-                }
-                html += '</div></div>';
-            }
+          //  if (rootFiles.length > 0) {
+          //      html += '<div class="nav-folder">';
+          //      html += '<div class="nav-folder-header" onclick="toggleFolder(this)" style="padding-left: 15px;">📁 根目录 <span class="toggle-icon">▼</span></div>';
+          //      html += '<div class="nav-folder-content">';
+          //      for (const file of rootFiles) {
+          //          const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
+          //          const safeName = file.original.replace(/'/g, "\\'");
+          //          html += `<li onclick="loadPost('${safeName}', '', '${file.sha || ''}')" style="padding-left: 30px;">${file.title}${dateStr}</li>`;
+          //      }
+          //      html += '</div></div>';
+          //  }
             
             // 渲染嵌套文件夹树
             html += renderNavTree(folderTree, files, 0);
