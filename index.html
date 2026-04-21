@@ -120,6 +120,15 @@
             display: none;
         }
 
+        .folder-icon, .toggle-icon {
+            margin-right: 5px;
+            font-size: 12px;
+        }
+
+        .nav-folder-header .folder-icon {
+            font-size: 14px;
+        }
+
         /* 主内容区 */
         #main-content {
             flex: 1;
@@ -553,7 +562,39 @@
             }
         }
 
-        // 获取所有文章
+        // 递归获取所有文件夹中的MD文件
+        async function fetchAllFilesRecursively(url, basePath = '') {
+            const files = [];
+            const folders = [];
+            
+            const response = await fetch(url, authToken ? {
+                headers: {
+                    'Authorization': `token ${authToken}`
+                }
+            } : {});
+            
+            if (!response.ok) return { files: [], folders: [] };
+            
+            const items = await response.json();
+            
+            for (const item of items) {
+                if (item.type === 'dir') {
+                    folders.push({
+                        ...item,
+                        path: basePath ? `${basePath}/${item.name}` : item.name
+                    });
+                } else if (item.name && item.name.endsWith('.md')) {
+                    files.push({
+                        ...item,
+                        path: basePath
+                    });
+                }
+            }
+            
+            return { files, folders };
+        }
+
+        // 获取所有文章（递归遍历所有子文件夹）
         async function fetchPosts() {
             try {
                 document.getElementById('nav-list').innerHTML = '<li class="loading">加载中...</li>';
@@ -576,67 +617,69 @@
                     throw new Error(`HTTP错误: ${response.status}`);
                 }
                 
-                const files = await response.json();
+                const items = await response.json();
                 
-                // 分类处理文件和文件夹
-                const folders = {};
-                const rootFiles = [];
+                // 递归获取所有文件和文件夹
+                const allFiles = [];
+                const folderTree = {};
+                const queue = [];
                 
-                for (const item of files) {
+                // 初始化：扫描posts目录下的直接子项
+                for (const item of items) {
                     if (item.type === 'dir') {
-                        try {
-                            const folderResponse = await fetch(item.url, authToken ? {
-                                headers: {
-                                    'Authorization': `token ${authToken}`
-                                }
-                            } : {});
-                            if (folderResponse.ok) {
-                                const folderFiles = await folderResponse.json();
-                                const mdFiles = folderFiles
-                                    .filter(file => file.name && file.name.endsWith('.md'))
-                                    .map(file => ({
-                                        ...file,
-                                        folder: item.name
-                                    }));
-                                folders[item.name] = mdFiles;
-                            }
-                        } catch (e) {
-                            console.error('获取文件夹内容失败:', item.name, e);
-                        }
+                        queue.push({ url: item.url, path: item.name });
                     } else if (item.name && item.name.endsWith('.md')) {
-                        rootFiles.push(item);
+                        allFiles.push({
+                            ...item,
+                            path: '',
+                            folderPath: ''
+                        });
+                    }
+                }
+                
+                // 递归遍历所有文件夹
+                while (queue.length > 0) {
+                    const { url, path } = queue.shift();
+                    const { files, folders: subFolders } = await fetchAllFilesRecursively(url, path);
+                    
+                    for (const file of files) {
+                        allFiles.push({
+                            ...file,
+                            folderPath: path
+                        });
+                    }
+                    
+                    for (const folder of subFolders) {
+                        queue.push({ url: folder.url, path: folder.path });
                     }
                 }
                 
                 // 处理文件信息
-                const processedRootFiles = rootFiles
+                const processedFiles = allFiles
                     .map(file => {
                         const info = parseFileName(file.name);
                         return {
                             ...file,
                             ...info,
-                            folder: null
+                            folderPath: file.folderPath
                         };
                     })
                     .filter(file => file.original && file.original !== 'unknown');
                 
-                const allFiles = [...processedRootFiles];
-                for (const [folderName, folderFiles] of Object.entries(folders)) {
-                    const processedFolderFiles = folderFiles
-                        .map(file => {
-                            const info = parseFileName(file.name);
-                            return {
-                                ...file,
-                                ...info,
-                                folder: folderName
-                            };
-                        })
-                        .filter(file => file.original && file.original !== 'unknown');
-                    allFiles.push(...processedFolderFiles);
+                // 构建文件夹树结构用于导航
+                for (const file of processedFiles) {
+                    const parts = file.folderPath ? file.folderPath.split('/') : [];
+                    let current = folderTree;
+                    for (const part of parts) {
+                        if (!current[part]) current[part] = {};
+                        current = current[part];
+                    }
+                    if (!current._files) current._files = [];
+                    current._files.push(file);
                 }
                 
                 // 排序
-                allFiles.sort((a, b) => {
+                processedFiles.sort((a, b) => {
                     if (a.date && b.date) {
                         if (a.date !== b.date) {
                             return b.date.localeCompare(a.date);
@@ -645,22 +688,22 @@
                     return a.order - b.order;
                 });
                 
-                updateNavigation(allFiles, folders);
+                updateNavigation(processedFiles, folderTree);
                 
                 // 加载文章
-                if (allFiles.length > 0) {
+                if (processedFiles.length > 0) {
                     if (currentPostInfo) {
-                        const exists = allFiles.some(file => 
+                        const exists = processedFiles.some(file => 
                             file.original === currentPostInfo.filename && 
-                            file.folder === currentPostInfo.folder
+                            file.folderPath === currentPostInfo.folderPath
                         );
                         if (exists) {
-                            loadPost(currentPostInfo.filename, currentPostInfo.folder, currentPostInfo.sha);
+                            loadPost(currentPostInfo.filename, currentPostInfo.folderPath, currentPostInfo.sha);
                         } else {
-                            loadPost(allFiles[0].original, allFiles[0].folder, allFiles[0].sha);
+                            loadPost(processedFiles[0].original, processedFiles[0].folderPath, processedFiles[0].sha);
                         }
                     } else {
-                        loadPost(allFiles[0].original, allFiles[0].folder, allFiles[0].sha);
+                        loadPost(processedFiles[0].original, processedFiles[0].folderPath, processedFiles[0].sha);
                     }
                 } else {
                     document.getElementById('post-list').innerHTML = 
@@ -687,8 +730,41 @@
             }
         }
 
-        // 更新导航栏
-        function updateNavigation(files, folders) {
+        // 递归渲染导航树
+        function renderNavTree(tree, files, depth = 0) {
+            let html = '';
+            const indent = depth * 15;
+            
+            // 渲染当前层的文件和文件夹
+            for (const [key, value] of Object.entries(tree)) {
+                if (key === '_files') continue;
+                
+                // 这是一个文件夹
+                const folderName = key;
+                html += `<div class="nav-folder" data-folder="${folderName}">`;
+                html += `<div class="nav-folder-header" onclick="toggleFolder(this)" style="padding-left: ${indent + 15}px;">`;
+                html += `<span class="folder-icon">📁</span> ${folderName} <span class="toggle-icon">▼</span>`;
+                html += '</div>';
+                html += '<div class="nav-folder-content">';
+                html += renderNavTree(value, files, depth + 1);
+                html += '</div></div>';
+            }
+            
+            // 渲染当前层的文件
+            if (tree._files) {
+                for (const file of tree._files) {
+                    const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
+                    const safeName = file.original.replace(/'/g, "\\'");
+                    const safePath = file.folderPath || '';
+                    html += `<li onclick="loadPost('${safeName}', '${safePath}', '${file.sha || ''}')" style="padding-left: ${indent + 30}px;">${file.title}${dateStr}</li>`;
+                }
+            }
+            
+            return html;
+        }
+
+        // 更新导航栏（支持多层嵌套）
+        function updateNavigation(files, folderTree) {
             const navList = document.getElementById('nav-list');
             
             if (files.length === 0) {
@@ -698,29 +774,22 @@
             
             let html = '';
             
-            const rootFiles = files.filter(file => !file.folder);
+            // 根目录文件
+            const rootFiles = files.filter(file => !file.folderPath);
             if (rootFiles.length > 0) {
                 html += '<div class="nav-folder">';
-                html += '<div class="nav-folder-header" onclick="toggleFolder(this)">根目录 ▼</div>';
+                html += '<div class="nav-folder-header" onclick="toggleFolder(this)" style="padding-left: 15px;">📁 根目录 <span class="toggle-icon">▼</span></div>';
                 html += '<div class="nav-folder-content">';
-                rootFiles.forEach(file => {
+                for (const file of rootFiles) {
                     const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
-                    html += `<li onclick="loadPost('${file.original.replace(/'/g, "\\'")}', null, '${file.sha || ''}')">${file.title}${dateStr}</li>`;
-                });
+                    const safeName = file.original.replace(/'/g, "\\'");
+                    html += `<li onclick="loadPost('${safeName}', '', '${file.sha || ''}')" style="padding-left: 30px;">${file.title}${dateStr}</li>`;
+                }
                 html += '</div></div>';
             }
             
-            for (const [folderName, folderFiles] of Object.entries(folders)) {
-                const folderFilesInfo = files.filter(file => file.folder === folderName);
-                html += `<div class="nav-folder" data-folder="${folderName}">`;
-                html += `<div class="nav-folder-header" onclick="toggleFolder(this)">${folderName} ▼</div>`;
-                html += '<div class="nav-folder-content">';
-                folderFilesInfo.forEach(file => {
-                    const dateStr = file.date ? `<span class="post-date">${file.date}</span>` : '';
-                    html += `<li onclick="loadPost('${file.original.replace(/'/g, "\\'")}', '${folderName}', '${file.sha || ''}')">${file.title}${dateStr}</li>`;
-                });
-                html += '</div></div>';
-            }
+            // 渲染嵌套文件夹树
+            html += renderNavTree(folderTree, files, 0);
             
             navList.innerHTML = html;
         }
@@ -729,10 +798,9 @@
         function toggleFolder(element) {
             const folder = element.parentElement;
             folder.classList.toggle('collapsed');
-            if (folder.classList.contains('collapsed')) {
-                element.innerHTML = element.innerHTML.replace('▼', '▶');
-            } else {
-                element.innerHTML = element.innerHTML.replace('▶', '▼');
+            const icon = element.querySelector('.toggle-icon');
+            if (icon) {
+                icon.textContent = folder.classList.contains('collapsed') ? '▶' : '▼';
             }
         }
 
@@ -740,7 +808,9 @@
         function updateCurrentPostDisplay() {
             if (authToken && currentPostInfo) {
                 const title = parseFileName(currentPostInfo.filename).title;
-                document.getElementById('current-post-display').textContent = `当前文章: ${title}`;
+                const folderPath = currentPostInfo.folderPath || '';
+                const location = folderPath ? `[${folderPath}]` : '[根目录]';
+                document.getElementById('current-post-display').textContent = `${location} ${title}`;
                 document.getElementById('edit-btn').style.display = 'inline-block';
                 document.getElementById('delete-btn').style.display = 'inline-block';
             } else {
@@ -763,6 +833,7 @@
                 if (folder) {
                     url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/posts/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
                 }
+                // 支持多层嵌套路径，如 "编程/JavaScript"
                 
                 const response = await fetch(url, authToken ? {
                     headers: {
@@ -795,7 +866,7 @@
                 // 保存当前文章信息
                 currentPostInfo = {
                     filename: filename,
-                    folder: folder,
+                    folderPath: folder,
                     sha: data.sha,
                     content: content
                 };
@@ -847,10 +918,10 @@
             
             document.getElementById('editor-title').textContent = '编辑文章';
             document.getElementById('post-title').value = parsedInfo.title;
-            document.getElementById('post-folder').value = info.folder || '';
+            document.getElementById('post-folder').value = info.folderPath || '';
             document.getElementById('post-content').value = info.content;
             document.getElementById('post-original-name').value = info.filename;
-            document.getElementById('post-folder-name').value = info.folder || '';
+            document.getElementById('post-folder-name').value = info.folderPath || '';
             document.getElementById('post-sha').value = info.sha;
             
             document.getElementById('post-list').style.display = 'none';
@@ -876,8 +947,8 @@
             try {
                 const info = currentPostInfo;
                 let filePath = `posts/${info.filename}`;
-                if (info.folder) {
-                    filePath = `posts/${info.folder}/${info.filename}`;
+                if (info.folderPath) {
+                    filePath = `posts/${info.folderPath}/${info.filename}`;
                 }
                 
                 const response = await fetch(
@@ -889,7 +960,7 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            message: `Delete post: ${info.filename}`,
+                            message: `Delete post: ${info.folderPath ? info.folderPath + '/' : ''}${info.filename}`,
                             sha: info.sha
                         })
                     }
