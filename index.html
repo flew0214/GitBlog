@@ -700,10 +700,10 @@
                         if (exists) {
                             loadPost(currentPostInfo.filename, currentPostInfo.folderPath, currentPostInfo.sha);
                         } else {
-                            loadPost(processedFiles[0].original, processedFiles[0].folderPath, processedFiles[0].sha);
+                            loadDefaultPost(processedFiles);
                         }
                     } else {
-                        loadPost(processedFiles[0].original, processedFiles[0].folderPath, processedFiles[0].sha);
+                        loadDefaultPost(processedFiles);
                     }
                 } else {
                     document.getElementById('post-list').innerHTML = 
@@ -741,9 +741,9 @@
                 
                 // 这是一个文件夹
                 const folderName = key;
-                html += `<div class="nav-folder" data-folder="${folderName}">`;
+                html += `<div class="nav-folder collapsed" data-folder="${folderName}">`;
                 html += `<div class="nav-folder-header" onclick="toggleFolder(this)" style="padding-left: ${indent + 15}px;">`;
-                html += `<span class="folder-icon">📁</span> ${folderName} <span class="toggle-icon">▼</span>`;
+                html += `<span class="folder-icon">📁</span> ${folderName} <span class="toggle-icon">▶</span>`;
                 html += '</div>';
                 html += '<div class="nav-folder-content">';
                 html += renderNavTree(value, files, depth + 1);
@@ -801,6 +801,18 @@
             const icon = element.querySelector('.toggle-icon');
             if (icon) {
                 icon.textContent = folder.classList.contains('collapsed') ? '▶' : '▼';
+            }
+        }
+
+        // 默认加载hello-world文章
+        function loadDefaultPost(files) {
+            const helloWorld = files.find(file => 
+                file.original.toLowerCase().includes('hello-world')
+            );
+            if (helloWorld) {
+                loadPost(helloWorld.original, helloWorld.folderPath, helloWorld.sha);
+            } else {
+                loadPost(files[0].original, files[0].folderPath, files[0].sha);
             }
         }
 
